@@ -1,0 +1,48 @@
+<link href="html5-canvas.css" rel="stylesheet" />
+<div>
+    <div id="dock" style="width: 0px; height: 0px"></div>
+    <canvas id="desk" width="255" height="340" class="canvas"></canvas>
+</div>
+<img id="face" src="face.png"></img>
+<script>
+
+ const dock = document.getElementById('dock');
+ const img2 = document.createElement('img');
+ img2.id = 'dback';
+ img2.src = 'back.png';
+ img2.style.position = 'absolute';
+ img2.style.left = '20pt';
+ img2.style.top = '20pt';
+img2.style.zIndex = -99;
+ dock.appendChild(img2);
+
+ const img = document.createElement('img');
+ img.id = 'dface';
+ img.src = 'face.png';
+ img.style.transform = 'rotate(10.63deg)';
+ /*
+ img.style.objectFit = 'none';
+ img.style.objectPosition = '50% 100%';
+ img.style.border = '1px solid black';
+ img.style.width = '260px';
+ img.style.height = '50px';
+ */
+ img.style.clipPath = 'polygon(0px 260px, 0px 300px, 215px 300px, 215px 240px)';
+ img.style.position = 'absolute';
+ img.style.top = '-125pt';
+ img.style.left = '35pt';
+ dock.appendChild(img);
+
+    const canvas = document.getElementById('desk');
+ const ctx = canvas.getContext('2d');
+    let region = new Path2D();
+    region.moveTo(20, 20);
+    region.lineTo(20, 60);
+    region.lineTo(235, 80);
+ region.lineTo(235, 20);
+ region.closePath();
+
+ ctx.stroke(region);
+ //ctx.fillStyle = 'blue';
+ //ctx.fillRect(0, 0, canvas.width, canvas.height);
+</script>
