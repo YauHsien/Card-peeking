@@ -4,15 +4,14 @@
         <script src="html5-canvas.js"></script>
     </head>
     <body>
+        <p>start...</p>
+        <div id="CARD_PEEKING_AREA" debug="true" style="width:400px; border: 1px solid black"></div>
+        <canvas style="border: 1px solid black"></canvas>
         <canvas id="desk" width="255" height="340" class="canvas"></canvas>
         <img id="ocf" src="face.png" />
         <img id="ocb" src="back.png" />
         <script>
-         const started_pt = { x: 21, y: 0 };
-         const achieved_pt = { x: 19, y: 70 };
-         console.log('Started point: %o, achieved point: %o, midpoint: %o', started_pt, achieved_pt, midpoint(started_pt, achieved_pt));
-
-         console.log('Inspect: %o', new PlayingCard());
+         document.addEventListener('DOMContentLoaded', initCardPeeking);
         </script>
     </body>
 </html>
