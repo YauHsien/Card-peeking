@@ -503,7 +503,8 @@ function ImageElement(basePt, imgElem, rad) {
     img.style.position = 'inherit';
     img.style.top = ''+basePt.y+'px';
     img.style.left = ''+basePt.x+'px';
-    img.style.transform = `rotate(${rad}rad)`;
+    if (rad)
+        img.style.transform = `rotate(${rad}rad)`;
     img.src = imgElem.src;
     return img;
 }
@@ -634,17 +635,22 @@ function Point(x, y) {
         return dy / dx;
     };
     this.getDistancePoints = function(distance, slope) {
-        let k = distance * Math.sqrt(1/(1+slope*slope));
-        return [
-            new Point(
-                this.x + k,
-                this.y + slope * k
-            ),
-            new Point(
-                this.x - k,
-                this.y - slope * k
-            )
-        ];
+        if (slope == Infinity || slope == -Infinity) {
+            return [new Point(this.x,this.y+distance), new Point(this.x,this.y-distance)];
+        }
+        else {
+            let k = distance * Math.sqrt(1/(1+slope*slope));
+            return [
+                new Point(
+                    this.x + k,
+                    this.y + slope * k
+                ),
+                new Point(
+                    this.x - k,
+                    this.y - slope * k
+                )
+            ];
+        }
     };
     this.isSameAs = function(pt = undefined) {
         return (pt
