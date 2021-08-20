@@ -5,6 +5,7 @@ const CARD_PEEKING_INIT_PROF = new (function(){
 })();
 
 let THE_CARD_PEEKING_ELEM;
+let DEBUG_ELEM;
 
 const RENDER_STATE_ENUM = new (function(){
     this.ACTIVA = '_activated';
@@ -84,8 +85,8 @@ function CardPeekingElement() {
         debugview = document.createElement('canvas');
         debugview._state = RENDER_STATE_ENUM.DISACT;
         debugview.style.position = 'absolute';
-        debugview.style.width = '' + area.clientWidth + 'px';
-        debugview.style.height = '' + area.clientHeight + 'px';
+        debugview.setAttribute('width', area.clientWidth);
+        debugview.setAttribute('height', area.clientHeight);
         debugview.render = function(event) {
             if (debugview._state === RENDER_STATE_ENUM.ACTIVA) {
                 console.log('debug reander!');
@@ -196,18 +197,17 @@ function CardPeekingElement() {
     controlport.addEventListener('mouseup', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
-        /*
         let pt = new Point(e.clientX, e.clientY);
         let latestTouched = area.cardList[area.cardList.length-1];
         if (latestTouched) {
             latestTouched.release();
         }
-        */
         area.render(e);
     });
     area.appendChild(background);
     area.appendChild(viewport);
     if (area.getAttribute('debug') === 'true') {
+        DEBUG_ELEM = debugview;
         controlport.appendChild(debugview);
         area.appendChild(controlport);
     }
@@ -229,6 +229,7 @@ function PlayingCard(id,
     this._inner_border = undefined;
 
     this.BORDER_WIDTH_RATE = 0.1;
+    this._border_width = undefined;
 
     this._base_point = undefined;
 
@@ -244,6 +245,7 @@ function PlayingCard(id,
     this._down_side = undefined;
     this._left_side = undefined;
     this._right_side = undefined;
+    this._center_point = undefined;
 
     this._corner_range = undefined;
 
@@ -309,6 +311,11 @@ function PlayingCard(id,
             new Line(this._base_point.x, this._base_point.y, this._base_point.x, this._base_point.y+this._face.naturalHeight);
         this._right_side =
             new Line(this._base_point.x+this._face.naturalWidth, this._base_point.y, this._base_point.x+this._face.naturalWidth, this._base_point.y+this._face.naturalHeight);
+        this._center_point =
+            midpoint(
+                midpoint(new Point(this._top_side.x1,this._top_side.y1), new Point(this._top_side.x2,this._top_side.y2)),
+                midpoint(new Point(this._down_side.x1,this._down_side.y1), new Point(this._down_side.x2,this._down_side.y2))
+            );
     };
 
     this._get_ranges = function() {
@@ -317,14 +324,14 @@ function PlayingCard(id,
                       this._face.naturalWidth,
                       this._base_point.y,
                       this._face.naturalHeight);
-        let bo_wi = (this._face.naturalWidth > this._face.naturalHeight)
+        this._border_width = (this._face.naturalWidth > this._face.naturalHeight)
             ? (this._face.naturalWidth * this.BORDER_WIDTH_RATE)
             : (this._face.naturalHeight * this.BORDER_WIDTH_RATE);
         this._inner_border =
-            new Range(this._base_point.x + bo_wi,
-                      this._face.naturalWidth - bo_wi - bo_wi,
-                      this._base_point.y + bo_wi,
-                      this._face.naturalHeight - bo_wi - bo_wi);
+            new Range(this._base_point.x + this._border_width,
+                      this._face.naturalWidth - this._border_width - this._border_width,
+                      this._base_point.y + this._border_width,
+                      this._face.naturalHeight - this._border_width - this._border_width);
     };
 
     this.getTopSide = function() {
@@ -345,6 +352,10 @@ function PlayingCard(id,
 
     this.getRange = function() {
         return this._outer_border;
+    };
+
+    this.getCenterPoint = function () {
+        return this._center_point;
     };
 
     this.isTouchable = function(pt = new Point()) {
@@ -374,11 +385,10 @@ function PlayingCard(id,
             let [p1, p2] = [this._flip_state.dragPt,
                             this._flip_state.edgePt];
             this._flip_state.dragTo(toPt);
-            console.log(this._flip_state.edgeSide);
             if ((p1 && !p1.isSameAs(this._flip_state.dragPt))
                 || (p2 && !p2.isSameAs(this._flip_state.edgePt))) {
                 this._state =
-                    this._parent_state =
+                    this._parent._state =
                     RENDER_STATE_ENUM.ACTIVA;
             }
         }
@@ -386,6 +396,8 @@ function PlayingCard(id,
 
     this.release = function() {
         if (this._flip_state) {
+            this._flip_state = undefined;
+            /*
             let o = this._flip_state.isFullShown;
             this._flip_state.isFullShown = true;
             if (o === this._flip_state.isFullShown) {
@@ -393,6 +405,10 @@ function PlayingCard(id,
                     this._parent_state =
                     RENDER_STATE_ENUM.ACTIVA;
             }
+            */
+            this._state =
+                this._parent._state =
+                RENDER_STATE_ENUM.ACTIVA;
         }
     };
 
@@ -416,8 +432,29 @@ function PlayingCard(id,
                     newOne.appendChild(img);
                 }
                 else {
+                    let faceImg,
+                        backImg;
                     let way;
-                    let img = new ImageElement(this._base_point, this._back, way);
+                    if (this._flip_state.cutLine
+                        && this._flip_state.cutLine.anotherCenter) {
+                        let corner = new Point(
+                            this._flip_state.cutLine.anotherCenter.x - this._face.naturalWidth / 2,
+                            this._flip_state.cutLine.anotherCenter.y - this._face.naturalHeight / 2
+                        );
+                        let slope = new Line(
+                            this._flip_state.cutLine.anotherCenter.x,
+                            this._flip_state.cutLine.anotherCenter.y,
+                            this._center_point.x,
+                            this._center_point.y
+                        ).getSlope();
+                        let rad = 2 * Math.atan(slope);
+                        faceImg = new ImageElement(corner, this._face, rad);
+                    }
+                    backImg = new ImageElement(this._base_point, this._back, way);
+                    if (backImg)
+                        newOne.appendChild(backImg);
+                    if (faceImg)
+                        newOne.appendChild(faceImg);
                 }
                 viewArea.appendChild(newOne);
                 /* Done of adding new one */
@@ -461,11 +498,12 @@ function CardList(arr = []) {
     return obj;
 } /* End of function CardList */
 
-function ImageElement(basePt, imgElem, way) {
+function ImageElement(basePt, imgElem, rad) {
     let img = document.createElement('img');
     img.style.position = 'inherit';
     img.style.top = ''+basePt.y+'px';
     img.style.left = ''+basePt.x+'px';
+    img.style.transform = `rotate(${rad}rad)`;
     img.src = imgElem.src;
     return img;
 }
@@ -475,16 +513,19 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
     this.dragPt = undefined;
     this.edgePt = undefined;
     this.edgeSide = undefined;
+    this.midPt = undefined;
     this.isFullShown = false;
     this._parent = parent;
+    this.cutLine = undefined;
     this.dragTo = function (pt = new Point()) {
         let seek_sides =
-            [ (pt.y === touchPt.y)? (undefined): ((pt.y > touchPt.y)? ('top'): ('down')),
-              (pt.x === touchPt.x)? (undefined): ((pt.x > touchPt.x)? ('left'): ('right')) ];
-        let link = new Line(touchPt.x, touchPt.y, pt.x, pt.y),
-            side,
+            [ (pt.y === this.touchPt.y)? (undefined): ((pt.y > this.touchPt.y)? ('top'): ('down')),
+              (pt.x === this.touchPt.x)? (undefined): ((pt.x > this.touchPt.x)? ('left'): ('right')) ];
+        let link = new Line(this.touchPt.x, this.touchPt.y, pt.x, pt.y),
+            sideWay,
             cross;
         for (let i = 0; i < seek_sides.length; i++) {
+            let side;
             let seek_side = seek_sides[i];
             let done = true;
             switch (seek_side) {
@@ -492,8 +533,7 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
                 side = this._parent.getTopSide();
                 cross = link.seekVCrossOn(side);
                 if (cross.sitsOn(side)) {
-                    this.edgePt = cross;
-                    this.edgeSide = 'top';
+                    sideWay = 'top';
                 }
                 else
                     done = false;
@@ -502,8 +542,7 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
                 side = this._parent.getDownSide();
                 cross = link.seekVCrossOn(side);
                 if (cross.sitsOn(side)) {
-                    this.edgePt = cross;
-                    this.edgeSide = 'down';
+                    sideWay = 'down';
                 }
                 else
                     done = false;
@@ -512,8 +551,7 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
                 side = this._parent.getLeftSide();
                 cross = link.seekHCrossOn(side);
                 if (cross.sitsOn(side)) {
-                    this.edgePt = cross;
-                    this.edgeSide = 'left';
+                    sideWay = 'left';
                 }
                 else
                     done = false;
@@ -522,8 +560,7 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
                 side = this._parent.getRightSide();
                 cross = link.seekHCrossOn(side);
                 if (cross.sitsOn(side)) {
-                    this.edgePt = cross;
-                    this.edgeSide = 'right';
+                    sideWay = 'right';
                 }
                 else
                     done = false;
@@ -535,10 +572,21 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
             if (done)
                 break;
         }
-
-        let Q1_dist = touchPt.getDistanceTo(pt);
+        let dist = this.touchPt.getDistanceTo(cross);
+        if (dist <= this._parent._border_width) {
+            this.dragPt = pt;
+            this.edgePt = cross;
+            this.edgeSide = sideWay;
+            this.midPt = midpoint(cross, pt);
+            let slope = new Line(pt.x, pt.y, cross.x, cross.y).getPerpendicularSlope();
+            let cutLine = new CutLine(this._parent, this.midPt, slope);
+            this.cutLine = cutLine;
+        }
+        else {
+            //console.log('exceeding');
+        }
         let Q2_slope = touchPt.getSlopeWith(pt);
-    };
+    }; /* End of this.dragTo */
 } /* End of function FlipState */
 
 function contains(playing_card = new PlayingCard(), pt = { x: undefined, y: undefined }) {
@@ -552,8 +600,16 @@ function touch(playing_card, pt) {
         playing_card.STATE = playing_card.ACTIVA;
 }
 
-function midpoint(apt = { x: 0, y: 5 }, bpt = { x: 5, y: 0 }) {
-    return { x: (apt.x+bpt.x)/2.0, y: (apt.y+bpt.y)/2.0 };
+function midpoint(apt = (new Point), bpt = (new Point)) {
+    return new Point((apt.x+bpt.x)/2.0, (apt.y+bpt.y)/2.0);
+}
+
+function get_area(a = (new Point), b = (new Point), c = (new Point)) {
+    let l1 = new Line(a.x, a.y, b.x, b.y).getDistance(),
+        l2 = new Line(a.x, a.y, c.x, c.y).getDistance(),
+        l3 = new Line(b.x, b.y, c.x, c.y).getDistance();
+    let s = (l1+l2+l3)/2;
+    return Math.sqrt(s*(s-l1)*(s-l2)*(s-l3));
 }
 
 function Size(w, h) {
@@ -577,6 +633,19 @@ function Point(x, y) {
         let dy = this.y - pt.y;
         return dy / dx;
     };
+    this.getDistancePoints = function(distance, slope) {
+        let k = distance * Math.sqrt(1/(1+slope*slope));
+        return [
+            new Point(
+                this.x + k,
+                this.y + slope * k
+            ),
+            new Point(
+                this.x - k,
+                this.y - slope * k
+            )
+        ];
+    };
     this.isSameAs = function(pt = undefined) {
         return (pt
                 && (pt.x === this.x)
@@ -587,7 +656,7 @@ function Point(x, y) {
                 && line.contains(this)
                );
     };
-}
+} /* End of function Point */
 
 function Range(x, w, y, h) {
     this.x = x;
@@ -606,6 +675,17 @@ function Line(x1, y1, x2, y2) {
     this.y1 = y1;
     this.x2 = x2;
     this.y2 = y2;
+    this.getDistance = function() {
+        let a = this.x1 - this.x2;
+        let b = this.y1 - this.y2;
+        return Math.sqrt(a*a + b*b);
+    };
+    this.getSlope = function() {
+        return (this.y1-this.y2)/(this.x1-this.x2);
+    };
+    this.getPerpendicularSlope = function() {
+        return - (this.x1-this.x2)/(this.y1-this.y2);
+    };
     this.isHorizontal = function() {
         return this.y1 === this.y2;
     };
@@ -623,7 +703,7 @@ function Line(x1, y1, x2, y2) {
               (x-this.x1) = (hSide.y1-this.y1)*(x1-x2) / (y1-y2)
             */
             let x = (hSide.y1-this.y1)*(this.x1-this.x2) / (this.y1-this.y2) + this.x1;
-            return new Point(x, hSide.y);
+            return new Point(x, hSide.y1);
         }
     };
     this.seekHCrossOn = function(vSide = (new Line)) {
@@ -636,17 +716,229 @@ function Line(x1, y1, x2, y2) {
               (y-this.y1) = (vSide.x-this.x1) * (y1-y2)/(x1-x2)
             */
             let y = (vSide.x1-this.x1) * (this.y1-this.y2)/(this.x1-this.x2) + this.y1;
-            return new Point(vSide.x, y);
+            return new Point(vSide.x1, y);
         }
     };
     this.contains = function(pt = undefined) {
         return (pt
                 && (((this.x1 === this.x2)
-                     ? ((this.y1 <= pt.y && pt.y <= this.y2) || (this.y2 <= pt.y && pt.y <= this.y1))
-                     : (undefined/*TODO: a point sitting on a slope.*/))
+                     ? ((this.y1 <= pt.y && pt.y <= this.y2)
+                        || (this.y2 <= pt.y && pt.y <= this.y1))
+                     : (this._f_eq(
+                         new Line(this.x1,this.y1,pt.x,pt.y).getSlope(),
+                         new Line(pt.x,pt.y,this.x2,this.y2).getSlope())
+                        && ((this.x1 <= pt.x && pt.x <= this.x2)
+                            || (this.x2 <= pt.x && pt.x <= this.x1))
+                        && (((this.y1 <= pt.y && pt.y <= this.y2)
+                             || (this.y2 <= pt.y && pt.y <= this.y1)))
+                       )
                     || ((this.y1 === this.y2)
-                        ? ((this.x1 <= pt.x && pt.x <= this.x2) || (this.x2 <= pt.x && pt.x <= this.x1))
-                        : (undefined/*TODO: a point sitting on a slope.*/)))
-               );
+                        ? ((this.x1 <= pt.x && pt.x <= this.x2)
+                           || (this.x2 <= pt.x && pt.x <= this.x1))
+                        : (this._f_eq(
+                            new Line(this.x1,this.y1,pt.x,pt.y).getSlope(),
+                            new Line(pt.x,pt.y,this.x2,this.y2).getSlope())
+                           && ((this.x1 <= pt.x && pt.x <= this.x2)
+                               || (this.x2 <= pt.x && pt.x <= this.x1))
+                           && (((this.y1 <= pt.y && pt.y <= this.y2)
+                                || (this.y2 <= pt.y && pt.y <= this.y1)))
+                          ))
+                    )));
     };
-}
+    this._f_eq = function(f1, f2) {
+        return (Math.abs(f1-f2) < 1e-9);
+    };
+} /* End of function Line */
+
+function CutLine(card = (new PlayingCard), pt = (new Point), slope = (1/0)) {
+    /**
+     * CutLine is a line crossing the point `pt` with `slope`,
+     * then it cuts the `card` on two points.
+     */
+    this.top = undefined;
+    this.left = undefined;
+    this.down = undefined;
+    this.right = undefined;
+    this._perpendicualr_point_from_center = undefined;
+    this.anotherCenter = undefined;
+    this._p1 = undefined;
+    this._p2 = undefined;
+    this._f_eq = function(f1, f2) {
+        return (Math.abs(f1-f2) < 1e-9);
+    };
+    /* Configuration */ {
+        let p;
+        /**
+         * Seek cut points.
+         */
+        if (slope == Infinity || slope == -Infinity) {
+            this.top = new Point(pt.x, card.getTopSide().y1);
+            this.down = new Point(pt.x, card.getDownSide().y1);
+        }
+        else if (slope == 0 || slope == -0) {
+            this.left = new Point(card.getLeftSide().x1, pt.y);
+            this.right = new Point(card.getRightSide().x1, pt.y);
+        }
+        else {
+            let m = Math.sqrt(1/(1+slope*slope));
+            let a =
+                { x: pt.x + m,
+                  y: pt.y + slope * m },
+                b =
+                { x: pt.x - m,
+                  y: pt.y - slope * m };
+            let line = new Line(a.x, a.y, b.x, b.y);
+            if (line.getSlope() < 0) {
+                p = line.seekHCrossOn(card.getLeftSide());
+                if (p.sitsOn(card.getLeftSide())) {
+                    this.left = p;
+                }
+                else {
+                    p = line.seekVCrossOn(card.getDownSide());
+                    if (p.sitsOn(card.getDownSide()))
+                        this.down = p;
+                }
+                p = line.seekVCrossOn(card.getTopSide());
+                if (p.sitsOn(card.getTopSide())) {
+                    this.top = p;
+                }
+                else {
+                    p = line.seekHCrossOn(card.getRightSide());
+                    if (p.sitsOn(card.getRightSide()))
+                        this.right = p;
+                }
+            }
+            else {
+                p = line.seekVCrossOn(card.getTopSide());
+                if (p.sitsOn(card.getTopSide())) {
+                    this.top = p;
+                }
+                else {
+                    p = line.seekHCrossOn(card.getLeftSide());
+                    if (p.sitsOn(card.getLeftSide()))
+                        this.left = p;
+                }
+                p = line.seekVCrossOn(card.getDownSide());
+                if (p.sitsOn(card.getDownSide())) {
+                    this.down = p;
+                }
+                else {
+                    p = line.seekHCrossOn(card.getRightSide());
+                    if (p.sitsOn(card.getRightSide()))
+                        this.right = p;
+                }
+            }
+        }
+        // End of cut-points seeking
+        /**
+         * Seek perpendicular point by card center
+         */
+        let pcross;
+        if (slope == 0 || slope == -0) {
+            pcross = midpoint(this.left, this.right);
+            this._p1 = new Point(this.left.x, pt.y);
+            this._p2 = new Point(this.right.x, pt.y);
+        }
+        else if (slope == Infinity || slope == -Infinity) {
+            pcross = midpoint(this.top, this.down);
+            this._p1 = new Point(pt.x, this.top.y);
+            this._p2 = new Point(pt.x, this.down.y);
+        }
+        else {
+            let cp = card.getCenterPoint();
+            let line,
+                p1,
+                p2;
+            if (this.top) {
+                line = new Line(cp.x, cp.y, p.x, p.y);
+                if (!p1)
+                    p1 = this.top;
+                else if (!p2)
+                    p2 = this.top;
+            }
+            if (this.left) {
+                line = new Line(cp.x, cp.y, p.x, p.y);
+                if (!p1)
+                    p1 = this.left;
+                else if (!p2)
+                    p2 = this.left;
+            }
+            if (this.right) {
+                line = new Line(cp.x, cp.y, p.x, p.y);
+                if (!p1)
+                    p1 = this.right;
+                else if (!p2)
+                    p2 = this.right;
+            }
+            if (this.down) {
+                line = new Line(cp.x, cp.y, p.x, p.y);
+                if (!p1)
+                    p1 = this.down;
+                else if (!p2)
+                    p2 = this.down;
+            }
+            let area = get_area(cp, p1, p2);
+            let len = new Line(p1.x, p1.y, p2.x, p2.y).getDistance();
+            let height = 2 * area / len;
+            let [d1, d2] = cp.getDistancePoints(height, -1/slope);
+            let [dt1, dt2] = [ d1.getDistanceTo(pt), d2.getDistanceTo(pt) ];
+            if (dt1 < dt2)
+                pcross = d1;
+            else
+                pcross = d2;
+            this._p1 = p1;
+            this._p2 = p2;
+        }
+        this._perpendicular_point_from_center = pcross;
+        /* End of perpendicular-cross-point seeking */
+        /**
+         * Seek another card center
+         */
+        let line1;
+        if (this._perpendicular_point_from_center) {
+            let cp = card.getCenterPoint();
+            line1 = new Line(
+                this._perpendicular_point_from_center.x,
+                this._perpendicular_point_from_center.y,
+                cp.x,
+                cp.y
+            );
+            let [d1, d2] = this._perpendicular_point_from_center.getDistancePoints(
+                line1.getDistance(),
+                line1.getSlope()
+            );
+            let [dt1, dt2] = [ d1.getDistanceTo(cp), d2.getDistanceTo(cp) ];
+            if (dt1 < dt2)
+                this.anotherCenter = d2;
+            else
+                this.anotherCenter = d1;
+        }
+        /* End of another card center */
+        /* DEBUG */ {
+            if (DEBUG_ELEM) {
+                let rleft = THE_CARD_PEEKING_ELEM.getBoundingClientRect().left + THE_CARD_PEEKING_ELEM.clientLeft,
+                    rtop = THE_CARD_PEEKING_ELEM.getBoundingClientRect().top + THE_CARD_PEEKING_ELEM.clientTop;
+                let ctx = DEBUG_ELEM.getContext('2d');
+                let center = card.getCenterPoint();
+                ctx.clearRect(0, 0, DEBUG_ELEM.width, DEBUG_ELEM.height);
+                ctx.beginPath();
+                if (this._p2)
+                    ctx.moveTo(this._p2.x, this._p2.y);
+                if (this._p1)
+                    ctx.lineTo(this._p1.x, this._p1.y);
+                ctx.lineTo(center.x, center.y);
+                if (this._perpendicular_point_from_center)
+                    ctx.lineTo(this._perpendicular_point_from_center.x, this._perpendicular_point_from_center.y);
+                ctx.strokeStyle = 'black';
+                ctx.stroke();
+                ctx.closePath();
+                ctx.beginPath();
+                ctx.moveTo(this._perpendicular_point_from_center.x, this._perpendicular_point_from_center.y);
+                if (this.anotherCenter)
+                    ctx.lineTo(this.anotherCenter.x, this.anotherCenter.y);
+                ctx.strokeStyle = '#ff0000';
+                ctx.stroke();
+            }
+        } /* End of debug */
+    } /* End of configuration */
+} /* End of function CutLine */
