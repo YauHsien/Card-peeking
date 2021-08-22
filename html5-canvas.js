@@ -194,7 +194,7 @@ function CardPeekingElement() {
         }
         area.render(e);
     });
-    controlport.addEventListener('mouseup', function(e) {
+    let mouseUpProc =  function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
         let pt = new Point(e.clientX, e.clientY);
@@ -203,7 +203,9 @@ function CardPeekingElement() {
             latestTouched.release();
         }
         area.render(e);
-    });
+    };
+    controlport.addEventListener('mouseup', mouseUpProc);
+    controlport.addEventListener('mouseout', mouseUpProc);
     area.appendChild(background);
     area.appendChild(viewport);
     if (area.getAttribute('debug') === 'true') {
@@ -246,6 +248,10 @@ function PlayingCard(id,
     this._left_side = undefined;
     this._right_side = undefined;
     this._center_point = undefined;
+    this._top_left = undefined;
+    this._top_right = undefined;
+    this._down_left = undefined;
+    this._down_right = undefined;
 
     this._corner_range = undefined;
 
@@ -316,6 +322,10 @@ function PlayingCard(id,
                 midpoint(new Point(this._top_side.x1,this._top_side.y1), new Point(this._top_side.x2,this._top_side.y2)),
                 midpoint(new Point(this._down_side.x1,this._down_side.y1), new Point(this._down_side.x2,this._down_side.y2))
             );
+        this._top_left = new Point(this._base_point.x, this._base_point.y);
+        this._top_right = new Point(this._base_point.x+this._face.naturalWidth, this._base_point.y);
+        this._down_left = new Point(this._base_point.x, this._base_point.y+this._face.naturalHeight);
+        this._down_right = new Point(this._base_point.x+this._face.naturalWidth, this._base_point.y+this._face.naturalHeight);
     };
 
     this._get_ranges = function() {
@@ -334,6 +344,10 @@ function PlayingCard(id,
                       this._face.naturalHeight - this._border_width - this._border_width);
     };
 
+    this.getArea = function() {
+        return get_convex_polygon_area([this._top_left, this._top_right, this._down_right, this._down_left]);
+    };
+
     this.getTopSide = function() {
         return this._top_side;
     };
@@ -348,6 +362,22 @@ function PlayingCard(id,
 
     this.getRightSide = function() {
         return this._right_side;
+    };
+
+    this.getTopLeftVertex = function() {
+        return this._top_left;
+    };
+
+    this.getTopRightVertex = function() {
+        return this._top_right;
+    };
+
+    this.getDownLeftVertex = function() {
+        return this._down_left;
+    };
+
+    this.getDownRightVertex = function() {
+        return this._down_right;
     };
 
     this.getRange = function() {
@@ -381,6 +411,7 @@ function PlayingCard(id,
 
     this.move = function (toPt = (new Point)) {
         if (this._flip_state
+            && !this._flip_state.isFullShown
             && !toPt.isSameAs(this._flip_state.touchPt)) {
             let [p1, p2] = [this._flip_state.dragPt,
                             this._flip_state.edgePt];
@@ -396,16 +427,12 @@ function PlayingCard(id,
 
     this.release = function() {
         if (this._flip_state) {
-            this._flip_state = undefined;
-            /*
-            let o = this._flip_state.isFullShown;
-            this._flip_state.isFullShown = true;
-            if (o === this._flip_state.isFullShown) {
-                this._state =
-                    this._parent_state =
-                    RENDER_STATE_ENUM.ACTIVA;
+            if (this._flip_state.getFaceArea() * 3 < this.getArea()) {
+                this._flip_state = undefined;
             }
-            */
+            else {
+                this._flip_state.isFullShown = true;
+            }
             this._state =
                 this._parent._state =
                 RENDER_STATE_ENUM.ACTIVA;
@@ -434,7 +461,6 @@ function PlayingCard(id,
                 else {
                     let faceImg,
                         backImg;
-                    let way;
                     if (this._flip_state.cutLine
                         && this._flip_state.cutLine.anotherCenter) {
                         let corner = new Point(
@@ -448,9 +474,12 @@ function PlayingCard(id,
                             this._center_point.y
                         ).getSlope();
                         let rad = 2 * Math.atan(slope);
-                        faceImg = new ImageElement(corner, this._face, rad);
+                        faceImg = new ImageElement(corner, this._face, rad, this._flip_state.faceShape);
+                        backImg =
+                            new ImageElement(this._base_point, this._back, undefined, this._flip_state.backShape);
                     }
-                    backImg = new ImageElement(this._base_point, this._back, way);
+                    else
+                        backImg = new ImageElement(this._base_point, this._back);
                     if (backImg)
                         newOne.appendChild(backImg);
                     if (faceImg)
@@ -498,15 +527,26 @@ function CardList(arr = []) {
     return obj;
 } /* End of function CardList */
 
-function ImageElement(basePt, imgElem, rad) {
+function ImageElement(basePt, imgElem, rad = undefined, shapePoints = undefined) {
     let img = document.createElement('img');
     img.style.position = 'inherit';
     img.style.top = ''+basePt.y+'px';
     img.style.left = ''+basePt.x+'px';
     if (rad)
         img.style.transform = `rotate(${rad}rad)`;
+    if (shapePoints)
+        img.style.clipPath = `polygon(${to_points_desc(shapePoints)})`;
     img.src = imgElem.src;
     return img;
+}
+
+function to_points_desc(points = []) {
+    let r = '';
+    for (let i = 0; i < points.length; i++) {
+        let pt = points[i];
+        r = r + `, ${pt.x}px ${pt.y}px`;
+    }
+    return r.slice(2);
 }
 
 function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
@@ -518,6 +558,8 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
     this.isFullShown = false;
     this._parent = parent;
     this.cutLine = undefined;
+    this.faceShape = undefined;
+    this.backShape = undefined;
     this.dragTo = function (pt = new Point()) {
         let seek_sides =
             [ (pt.y === this.touchPt.y)? (undefined): ((pt.y > this.touchPt.y)? ('top'): ('down')),
@@ -581,14 +623,200 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
             this.midPt = midpoint(cross, pt);
             let slope = new Line(pt.x, pt.y, cross.x, cross.y).getPerpendicularSlope();
             let cutLine = new CutLine(this._parent, this.midPt, slope);
-            this.cutLine = cutLine;
+            if (JSON.stringify(cutLine) !== '{}')
+                this.cutLine = cutLine;
+            let faceShape,
+                backShape;
+            if (cutLine.left && cutLine.down) {
+                let s1 = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopRightVertex(),
+                    this._parent.getDownRightVertex(),
+                    cutLine.down,
+                    cutLine.left ],
+                    s2 = [
+                        cutLine.down,
+                        cutLine.left,
+                        this._parent.getDownLeftVertex()
+                    ];
+                if (sideWay == 'top' || sideWay == 'right') {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else if (sideWay == 'down' || sideWay == 'left') {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (cutLine.right && cutLine.down) {
+                let s1 = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopRightVertex(),
+                    cutLine.right,
+                    cutLine.down,
+                    this._parent.getDownLeftVertex() ],
+                    s2 = [
+                        cutLine.down,
+                        cutLine.right,
+                        this._parent.getDownRightVertex()
+                    ];
+                if (sideWay == 'top' || sideWay == 'left') {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else if (sideWay == 'down' || sideWay == 'right') {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (cutLine.top && cutLine.left) {
+                let s1 = [
+                    this._parent.getTopLeftVertex(),
+                    cutLine.top,
+                    cutLine.left
+                ],
+                    s2 = [
+                        cutLine.top,
+                        cutLine.left,
+                        this._parent.getDownLeftVertex(),
+                        this._parent.getDownRightVertex(),
+                        this._parent.getTopRightVertex()
+                    ];
+                if (sideWay == 'top' || sideWay == 'left') {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (cutLine.top && cutLine.right) {
+                let s1 = [
+                    this._parent.getTopRightVertex(),
+                    cutLine.top,
+                    cutLine.right
+                ],
+                    s2 = [
+                        cutLine.top,
+                        cutLine.right,
+                        this._parent.getDownRightVertex(),
+                        this._parent.getDownLeftVertex(),
+                        this._parent.getTopLeftVertex()
+                    ];
+                if (sideWay == 'top' || sideWay == 'right') {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (cutLine.top && cutLine.down) {
+                let s1 = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getDownLeftVertex(),
+                    cutLine.down,
+                    cutLine.top
+                ],
+                    s2 = [
+                        cutLine.down,
+                        cutLine.top,
+                        this._parent.getTopRightVertex(),
+                        this._parent.getDownRightVertex()
+                    ];
+                if (sideWay == 'left' || (sideWay == 'top' && slope < 0) || (sideWay == 'down' && slope > 0)) {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (cutLine.left && cutLine.right) {
+                let s1 = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopRightVertex(),
+                    cutLine.right,
+                    cutLine.left
+                ],
+                    s2 = [
+                        cutLine.right,
+                        cutLine.left,
+                        this._parent.getDownLeftVertex(),
+                        this._parent.getDownRightVertex()
+                    ];
+                if (sideWay == 'top' || (sideWay == 'left' && slope < 0) || (sideWay == 'right' && slope > 0)) {
+                    faceShape = s1;
+                    backShape = s2;
+                }
+                else {
+                    faceShape = s2;
+                    backShape = s1;
+                }
+            }
+            else if (!cutLine.left && !cutLine.right && !cutLine.top && !cutLine.down) {
+                faceShape = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopRightVertex(),
+                    this._parent.getDownRightVertex(),
+                    this._parent.getDownLeftVertex()
+                ];
+                backShape = [
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopLeftVertex(),
+                    this._parent.getTopLeftVertex()
+                ];
+            }
+            else {
+                throw `Cut line not supported ${JSON.stringify(cutLine)}`;
+            }
+            let offset =
+                new Size(-this._parent.getTopLeftVertex().x, -this._parent.getTopLeftVertex().y);
+            faceShape = hFlipBy(this._parent.getCenterPoint(), faceShape);
+            this.faceShape = moveBy(offset, faceShape);
+            this.backShape = moveBy(offset, backShape);
         }
         else {
             //console.log('exceeding');
         }
-        let Q2_slope = touchPt.getSlopeWith(pt);
     }; /* End of this.dragTo */
+    this.getFaceArea = function () {
+        return get_convex_polygon_area(this.faceShape);
+    };
 } /* End of function FlipState */
+
+function hFlipBy(pivot = (new Point), shapePoints = []) {
+    let r = [];
+    for (let i = 0; i < shapePoints.length; i++) {
+        let pt = shapePoints[i];
+        let dx = pt.x - pivot.x;
+        r[i] = new Point(pivot.x-dx, pt.y);
+    }
+    return r;
+}
+
+function vFlipBy(pivot = (new Point), shapePoints = []) {
+    let r = [];
+    for (let i = 0; i < shapePoints.length; i++) {
+        let pt = shapePoints[i];
+        let dy = pt.y - pivot.y;
+        r[i] = new Point(pt.x, pivot.y-dy);
+    }
+    return r;
+}
+
+function moveBy(offset = (new Size), shapePoints = []) {
+    let r = [];
+    for (let i = 0; i < shapePoints.length; i++) {
+        let pt = shapePoints[i];
+        r[i] = new Point(pt.x+offset.w, pt.y+offset.h);
+    }
+    return r;
+}
 
 function contains(playing_card = new PlayingCard(), pt = { x: undefined, y: undefined }) {
     return (playing_card.MinX <= pt.x && pt.x <= playing_card.MaxX
@@ -611,6 +839,22 @@ function get_area(a = (new Point), b = (new Point), c = (new Point)) {
         l3 = new Line(b.x, b.y, c.x, c.y).getDistance();
     let s = (l1+l2+l3)/2;
     return Math.sqrt(s*(s-l1)*(s-l2)*(s-l3));
+}
+
+function get_convex_polygon_area(shapePoints = []) {
+    switch (shapePoints.length) {
+    case 3:
+        return get_area(shapePoints[0], shapePoints[1], shapePoints[2]);
+    case 4:
+        return get_area(shapePoints[0], shapePoints[1], shapePoints[2])
+            + get_area(shapePoints[0], shapePoints[2], shapePoints[3]);
+    case 5:
+        return get_area(shapePoints[0], shapePoints[1], shapePoints[2])
+            + get_area(shapePoints[0], shapePoints[2], shapePoints[3])
+            + get_area(shapePoints[0], shapePoints[3], shapePoints[4]);
+    default:
+        return undefined;
+    }
 }
 
 function Size(w, h) {
@@ -883,17 +1127,19 @@ function CutLine(card = (new PlayingCard), pt = (new Point), slope = (1/0)) {
                 else if (!p2)
                     p2 = this.down;
             }
-            let area = get_area(cp, p1, p2);
-            let len = new Line(p1.x, p1.y, p2.x, p2.y).getDistance();
-            let height = 2 * area / len;
-            let [d1, d2] = cp.getDistancePoints(height, -1/slope);
-            let [dt1, dt2] = [ d1.getDistanceTo(pt), d2.getDistanceTo(pt) ];
-            if (dt1 < dt2)
-                pcross = d1;
-            else
-                pcross = d2;
-            this._p1 = p1;
-            this._p2 = p2;
+            if (p1 && p2) {
+                let area = get_area(cp, p1, p2);
+                let len = new Line(p1.x, p1.y, p2.x, p2.y).getDistance();
+                let height = 2 * area / len;
+                let [d1, d2] = cp.getDistancePoints(height, -1/slope);
+                let [dt1, dt2] = [ d1.getDistanceTo(pt), d2.getDistanceTo(pt) ];
+                if (dt1 < dt2)
+                    pcross = d1;
+                else
+                    pcross = d2;
+                this._p1 = p1;
+                this._p2 = p2;
+            }
         }
         this._perpendicular_point_from_center = pcross;
         /* End of perpendicular-cross-point seeking */
@@ -939,7 +1185,8 @@ function CutLine(card = (new PlayingCard), pt = (new Point), slope = (1/0)) {
                 ctx.stroke();
                 ctx.closePath();
                 ctx.beginPath();
-                ctx.moveTo(this._perpendicular_point_from_center.x, this._perpendicular_point_from_center.y);
+                if (this._perpendicular_point_from_center)
+                    ctx.moveTo(this._perpendicular_point_from_center.x, this._perpendicular_point_from_center.y);
                 if (this.anotherCenter)
                     ctx.lineTo(this.anotherCenter.x, this.anotherCenter.y);
                 ctx.strokeStyle = '#ff0000';
