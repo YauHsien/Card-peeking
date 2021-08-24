@@ -31,6 +31,10 @@ const POKER_SIZE_2 = new Size(300, 215);
 /* Initialization */
 //document.addEventListener('DOMContentLoaded', initCardPeeking);
 
+/**
+ * Example of initialization
+ */
+/*
 function initCardPeeking (event) {
     const elem = new CardPeekingElement();
     let _card_1 = new PlayingCard(
@@ -49,6 +53,7 @@ function initCardPeeking (event) {
     );
     THE_CARD_PEEKING_ELEM = elem;
 }
+*/
 
 function CardPeekingElement() {
     const area = document.getElementById(CARD_PEEKING_INIT_PROF.NAME);
@@ -126,35 +131,140 @@ function CardPeekingElement() {
         controlport.style.position = 'absolute';
     controlport.style.width = '' + area.clientWidth + 'px';
     controlport.style.height = '' + area.clientHeight + 'px';
+    controlport.touch = undefined;
     controlport.addEventListener('touchstart', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
-        // let pt = new Point(...);
-        /// ...
-        // if (latestTouched) {
-        //     latestTouched.touch(pt);
-        // }
-        area.render(e);
+        let controlled;
+        if (e.targetTouches.length === 2) {
+            let t1 = e.targetTouches.item(0),
+                t2 = e.targetTouches.item(1);
+            let p1 =
+                new Point(
+                    t1.clientX - area.getBoundingClientRect().left - area.clientLeft,
+                    t1.clientY - area.getBoundingClientRect().top - area.clientTop
+                ),
+                p2 = new Point(
+                    t2.clientX - area.getBoundingClientRect().left - area.clientLeft,
+                    t2.clientY - area.getBoundingClientRect().top - area.clientTop
+                );
+            let a1, a2;
+            for (let i = area.cardList.length-1; i > -1; i--) {
+                let r = area.cardList[i].getRange();
+                if (!a1 && p1.within(r)) {
+                    a1 = t1.identifier;
+                    controlled = area.cardList[i];
+                }
+                if (!a2 && p2.within(r)) {
+                    a2 = t2.identifier;
+                    controlled = area.cardList[i];
+                }
+            }
+            if (a1 !== undefined && a2 && controlled) {
+                let pt = midpoint(p1, p2);
+                let cutLine = new CutLine(
+                    controlled,
+                    pt,
+                    p1.getSlopeWith(p2)
+                );
+                let ct = controlled.getCenterPoint();
+                if (cutLine.top && cutLine.down) {
+                    if (cutLine.top.x < ct.x && cutLine.down.x < ct.x) {
+                        this.touch = {
+                            t1: t1,
+                            t2: t2,
+                            side: 'left',
+                            touchPt: new Point(controlled.getLeftSide().x1, ct.y)
+                        };
+                    }
+                    else if (ct.x < cutLine.top.x && ct.x < cutLine.down.x) {
+                        this.touch = {
+                            t1: t1,
+                            t2: t2,
+                            side: 'right',
+                            touchPt: new Point(controlled.getRightSide().x1, ct.y)
+                        };
+                    }
+                }
+                else if (cutLine.left && cutLine.right) {
+                    if (cutLine.left.y < ct.y && cutLine.right.y < ct.y) {
+                        this.touch = {
+                            t1: t1,
+                            t2: t2,
+                            side: 'top',
+                            touchPt: new Point(ct.x, controlled.getTopSide().y1)
+                        };
+                    }
+                    else if (ct.y < cutLine.left.y && ct.y < cutLine.right.y) {
+                        this.touch = {
+                            t1: t1,
+                            t2: t2,
+                            side: 'down',
+                            touchPt: new Point(ct.x, controlled.getDownSide().y1)
+                        };
+                    }
+                }
+                console.log(this.touch);
+            }
+        }
+        else if (e.targetTouches.length === 1) {
+            let pt =
+                new Point(
+                    e.targetTouches.item(0).clientX - area.getBoundingClientRect().left - area.clientLeft,
+                    e.targetTouches.item(0).clientY - area.getBoundingClientRect().top - area.clientTop
+                );
+            this.touch = {
+                t1: e.targetTouches.item(0),
+                t2: undefined,
+                side: undefined,
+                touchPt: pt
+            };
+        }
+        else
+            this.touch = undefined;
+        if (this.touch && this.touch.touchPt) {
+            let evt = new MouseEvent('mousedown', {
+                clientX: this.touch.touchPt.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: this.touch.touchPt.y + area.getBoundingClientRect().top + area.clientTop
+            });
+            this.dispatchEvent(evt);
+        }
     });
     controlport.addEventListener('touchmove', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
-        // let pt = new Point(...);
-        // ...
-        // if (latestTouched) {
-        //     latestTouched.move(pt);
-        // }
-        area.render(e);
+        if (this.touch
+            && ((e.targetTouches.length === 2
+                 && this.touch.t1
+                 && this.touch.t2
+                 && ((this.touch.t1.identifier === e.targetTouches.item(0).identifier
+                      && this.touch.t2.identifier === e.targetTouches.item(1).identifier)
+                     || (this.touch.t1.identifier === e.targetTouches.item(1).identifier
+                         && this.touch.t2.identifier === e.targetTouches.item(0).identifier))
+                 || (e.targetTouches.length === 1
+                     && this.touch.t1
+                     && this.touch.t1.identifier === e.targetTouches.item(0).identifier)))
+           ) {
+            let movePt;
+            let evt;
+            if (this.touch.t2)
+                movePt = midpoint(
+                    new Point(e.targetTouches.item(0).clientX, e.targetTouches.item(0).clientY),
+                    new Point(e.targetTouches.item(1).clientX, e.targetTouches.item(1).clientY)
+                );
+            else
+                movePt = new Point(e.targetTouches.item(0).clientX, e.targetTouches.item(0).clientY);
+            evt = new MouseEvent('mousemove', {
+                clientX: movePt.x,
+                clientY: movePt.y
+            });
+            this.dispatchEvent(evt);
+        }
     });
     controlport.addEventListener('touchend', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
-        // let pt = new Point(...);
-        // ...
-        // if (latestTouched) {
-        //     latestTouched.release();
-        // }
-        area.render(e);
+        this.dispatchEvent(new MouseEvent('mouseup', e));
     });
     controlport.addEventListener('mousedown', function(e) {
         if (area.getAttribute('debug') !== 'true')
@@ -194,7 +304,7 @@ function CardPeekingElement() {
         }
         area.render(e);
     });
-    let mouseUpProc =  function(e) {
+    controlport.addEventListener('mouseup', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
         let pt = new Point(e.clientX, e.clientY);
@@ -203,9 +313,12 @@ function CardPeekingElement() {
             latestTouched.release();
         }
         area.render(e);
-    };
-    controlport.addEventListener('mouseup', mouseUpProc);
-    controlport.addEventListener('mouseout', mouseUpProc);
+    });
+    controlport.addEventListener('mouseout', function(e) {
+        if (area.getAttribute('debug') !== 'true')
+            e.preventDefault();
+        this.dispatchEvent(new MouseEvent('mouseup', e));
+    });
     area.appendChild(background);
     area.appendChild(viewport);
     if (area.getAttribute('debug') === 'true') {
@@ -254,6 +367,8 @@ function PlayingCard(id,
     this._down_right = undefined;
 
     this._corner_range = undefined;
+
+    this.fingers = [];
 
     this.setParent = function(elem) {
         this._parent = elem;
@@ -344,6 +459,15 @@ function PlayingCard(id,
                       this._face.naturalHeight - this._border_width - this._border_width);
     };
 
+    this.collectFinger = function(pos = (new Point), touch) {
+        if (pos.within(this._outer_border)) {
+            this.fingers[this.fingers.length] = touch;
+            return true;
+        }
+        else
+            return false;
+    };
+
     this.getArea = function() {
         return get_convex_polygon_area([this._top_left, this._top_right, this._down_right, this._down_left]);
     };
@@ -431,7 +555,27 @@ function PlayingCard(id,
                 this._flip_state = undefined;
             }
             else {
-                this._flip_state.isFullShown = true;
+                let dist = (this._flip_state.edgeSide == 'left' || this._flip_state.edgeSide == 'right')
+                    ? this._top_side.getDistance()
+                    : this._left_side.getDistance(),
+                    slope = new Line(
+                        this._flip_state.edgePt.x,
+                        this._flip_state.edgePt.y,
+                        this._flip_state.dragPt.x,
+                        this._flip_state.dragPt.y
+                    ).getSlope();
+                let [d1, d2] = this._flip_state.edgePt.getDistancePoints(1.5*dist, slope);
+                let [dd1, dd2] = [
+                    this._flip_state.dragPt.getDistanceTo(d1),
+                    this._flip_state.dragPt.getDistanceTo(d2)
+                ];
+                let t;
+                if (dd1 < dd2)
+                    t = d1;
+                else
+                    t = d2;
+                this._flip_state.dragTo(t);
+                this._flip_state.setIsFullShown(true);
             }
             this._state =
                 this._parent._state =
@@ -784,6 +928,30 @@ function FlipState(parent = (new PlayingCard), touchPt = new Point()) {
             //console.log('exceeding');
         }
     }; /* End of this.dragTo */
+    this.setIsFullShown = function (value) {
+        if (value)
+            this.isFullShown = true;
+        else
+            this.isFullShown = false;
+        let faceShape =
+            [
+                this._parent.getTopLeftVertex(),
+                this._parent.getTopRightVertex(),
+                this._parent.getDownRightVertex(),
+                this._parent.getDownLeftVertex()
+            ],
+            backShape = [
+                this._parent.getTopLeftVertex(),
+                this._parent.getTopLeftVertex(),
+                this._parent.getTopLeftVertex(),
+                this._parent.getTopLeftVertex()
+            ];
+        let offset =
+            new Size(-this._parent.getTopLeftVertex().x, -this._parent.getTopLeftVertex().y);
+        faceShape = hFlipBy(this._parent.getCenterPoint(), faceShape);
+        this.faceShape = moveBy(offset, faceShape);
+        this.backShape = moveBy(offset, backShape);
+    };
     this.getFaceArea = function () {
         return get_convex_polygon_area(this.faceShape);
     };

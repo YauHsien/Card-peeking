@@ -4,13 +4,26 @@
         <script src="html5-canvas.js"></script>
     </head>
     <body>
-        <p>start...</p>
-        <div id="CARD_PEEKING_AREA" debug="true" style="width:400px; border: 1px solid black"></div>
-        <canvas style="border: 1px solid black"></canvas>
-        <canvas id="desk" width="255" height="340" class="canvas"></canvas>
-        <img id="ocf" src="face.png" />
-        <img id="ocb" src="back.png" />
+        <div id="CARD_PEEKING_AREA" debug="true" style="width: 500px; height: 300px; border: 1px solid black"></div>
         <script>
+         function initCardPeeking (event) {
+             const elem = new CardPeekingElement();
+             let _card_1 = new PlayingCard(
+                 'c1',
+                 elem,
+                 new Point(20, 20),
+                 'face1.png',
+                 'back1.png'
+             );
+             let _card_2 = new PlayingCard(
+                 'c2',
+                 elem,
+                 new Point(150, 20),
+                 'face2.png',
+                 'back2.png'
+             );
+             THE_CARD_PEEKING_ELEM = elem;
+         }
          document.addEventListener('DOMContentLoaded', initCardPeeking);
         </script>
     </body>
