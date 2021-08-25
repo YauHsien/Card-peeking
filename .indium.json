@@ -1,0 +1,7 @@
+{
+    "configurations": [{
+        "name": "Card Peeking in ECMA Script",
+        "type": "chrome",
+        "url": "html5-canvas.html"
+    }]
+}

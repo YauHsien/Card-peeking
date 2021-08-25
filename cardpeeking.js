@@ -204,7 +204,6 @@ function CardPeekingElement() {
                         };
                     }
                 }
-                console.log(this.touch);
             }
         }
         else if (e.targetTouches.length === 1) {
@@ -661,8 +660,11 @@ function ImageElement(basePt, imgElem, rad = undefined, shapePoints = undefined)
     img.style.left = ''+basePt.x+'px';
     if (rad)
         img.style.transform = `rotate(${rad}rad)`;
-    if (shapePoints)
-        img.style.clipPath = `polygon(${to_points_desc(shapePoints)})`;
+    if (shapePoints) {
+        img.style.clipPath =
+            img.style.webkitClipPath =
+            `polygon(${to_points_desc(shapePoints)})`;
+    }
     img.src = imgElem.src;
     return img;
 }
