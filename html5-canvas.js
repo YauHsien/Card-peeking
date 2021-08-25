@@ -555,26 +555,6 @@ function PlayingCard(id,
                 this._flip_state = undefined;
             }
             else {
-                let dist = (this._flip_state.edgeSide == 'left' || this._flip_state.edgeSide == 'right')
-                    ? this._top_side.getDistance()
-                    : this._left_side.getDistance(),
-                    slope = new Line(
-                        this._flip_state.edgePt.x,
-                        this._flip_state.edgePt.y,
-                        this._flip_state.dragPt.x,
-                        this._flip_state.dragPt.y
-                    ).getSlope();
-                let [d1, d2] = this._flip_state.edgePt.getDistancePoints(1.5*dist, slope);
-                let [dd1, dd2] = [
-                    this._flip_state.dragPt.getDistanceTo(d1),
-                    this._flip_state.dragPt.getDistanceTo(d2)
-                ];
-                let t;
-                if (dd1 < dd2)
-                    t = d1;
-                else
-                    t = d2;
-                this._flip_state.dragTo(t);
                 this._flip_state.setIsFullShown(true);
             }
             this._state =
@@ -605,8 +585,11 @@ function PlayingCard(id,
                 else {
                     let faceImg,
                         backImg;
-                    if (this._flip_state.cutLine
-                        && this._flip_state.cutLine.anotherCenter) {
+                    if (this._flip_state.isFullShown) {
+                        faceImg = new ImageElement(this._base_point, this._face);
+                    }
+                    else if (this._flip_state.cutLine
+                             && this._flip_state.cutLine.anotherCenter) {
                         let corner = new Point(
                             this._flip_state.cutLine.anotherCenter.x - this._face.naturalWidth / 2,
                             this._flip_state.cutLine.anotherCenter.y - this._face.naturalHeight / 2
