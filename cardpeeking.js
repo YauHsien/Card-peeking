@@ -132,9 +132,7 @@ function CardPeekingElement() {
     controlport.style.width = '' + area.clientWidth + 'px';
     controlport.style.height = '' + area.clientHeight + 'px';
     controlport.touch = undefined;
-    controlport.addEventListener('touchstart', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+    function judge_touches(that, e) {
         let controlled;
         if (e.targetTouches.length === 2) {
             let t1 = e.targetTouches.item(0),
@@ -170,37 +168,41 @@ function CardPeekingElement() {
                 let ct = controlled.getCenterPoint();
                 if (cutLine.top && cutLine.down) {
                     if (cutLine.top.x < ct.x && cutLine.down.x < ct.x) {
-                        this.touch = {
+                        that.touch = {
                             t1: t1,
                             t2: t2,
                             side: 'left',
-                            touchPt: new Point(controlled.getLeftSide().x1, ct.y)
+                            touchPt: new Point(controlled.getLeftSide().x1, ct.y),
+                            touched: undefined
                         };
                     }
                     else if (ct.x < cutLine.top.x && ct.x < cutLine.down.x) {
-                        this.touch = {
+                        that.touch = {
                             t1: t1,
                             t2: t2,
                             side: 'right',
-                            touchPt: new Point(controlled.getRightSide().x1, ct.y)
+                            touchPt: new Point(controlled.getRightSide().x1, ct.y),
+                            touched: undefined
                         };
                     }
                 }
                 else if (cutLine.left && cutLine.right) {
                     if (cutLine.left.y < ct.y && cutLine.right.y < ct.y) {
-                        this.touch = {
+                        that.touch = {
                             t1: t1,
                             t2: t2,
                             side: 'top',
-                            touchPt: new Point(ct.x, controlled.getTopSide().y1)
+                            touchPt: new Point(ct.x, controlled.getTopSide().y1),
+                            touched: undefined
                         };
                     }
                     else if (ct.y < cutLine.left.y && ct.y < cutLine.right.y) {
-                        this.touch = {
+                        that.touch = {
                             t1: t1,
                             t2: t2,
                             side: 'down',
-                            touchPt: new Point(ct.x, controlled.getDownSide().y1)
+                            touchPt: new Point(ct.x, controlled.getDownSide().y1),
+                            touched: undefined
                         };
                     }
                 }
@@ -212,26 +214,34 @@ function CardPeekingElement() {
                     e.targetTouches.item(0).clientX - area.getBoundingClientRect().left - area.clientLeft,
                     e.targetTouches.item(0).clientY - area.getBoundingClientRect().top - area.clientTop
                 );
-            this.touch = {
+            that.touch = {
                 t1: e.targetTouches.item(0),
                 t2: undefined,
                 side: undefined,
-                touchPt: pt
+                touchPt: pt,
+                touched: undefined
             };
         }
         else
-            this.touch = undefined;
-        if (this.touch && this.touch.touchPt) {
+            that.touch = undefined;
+        if (that.touch && that.touch.touchPt) {
             let evt = new MouseEvent('mousedown', {
-                clientX: this.touch.touchPt.x + area.getBoundingClientRect().left + area.clientLeft,
-                clientY: this.touch.touchPt.y + area.getBoundingClientRect().top + area.clientTop
+                clientX: that.touch.touchPt.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: that.touch.touchPt.y + area.getBoundingClientRect().top + area.clientTop
             });
-            this.dispatchEvent(evt);
+            that.dispatchEvent(evt);
         }
+    }
+    controlport.addEventListener('touchstart', function(e) {
+        if (area.getAttribute('debug') !== 'true')
+            e.preventDefault();
+        judge_touches(this, e);
     });
     controlport.addEventListener('touchmove', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
+        if (this.touch && !this.touch.touched)
+            judge_touches(this, e);
         if (this.touch
             && ((e.targetTouches.length === 2
                  && this.touch.t1
@@ -263,6 +273,8 @@ function CardPeekingElement() {
     controlport.addEventListener('touchend', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
+        if (e.targetTouches.length === 0)
+            this.touch = undefined;
         this.dispatchEvent(new MouseEvent('mouseup', e));
     });
     controlport.addEventListener('mousedown', function(e) {
@@ -285,6 +297,8 @@ function CardPeekingElement() {
                 gotBlocked = true;
         }
         if (latestTouched && !gotBlocked) {
+            if (this.touch)
+                this.touch.touched = latestTouched;
             area.cardList.bringToLatest(i);
             latestTouched.touch(pt);
         }
@@ -306,7 +320,6 @@ function CardPeekingElement() {
     controlport.addEventListener('mouseup', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
-        let pt = new Point(e.clientX, e.clientY);
         let latestTouched = area.cardList[area.cardList.length-1];
         if (latestTouched) {
             latestTouched.release();
@@ -663,6 +676,9 @@ function ImageElement(basePt, imgElem, rad = undefined, shapePoints = undefined)
     if (shapePoints) {
         img.style.clipPath =
             img.style.webkitClipPath =
+            img.style.mozClipPath =
+            img.style.msClipPath =
+            img.style.oClipPath =
             `polygon(${to_points_desc(shapePoints)})`;
     }
     img.src = imgElem.src;
