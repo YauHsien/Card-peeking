@@ -1,11 +1,12 @@
 <html>
     <head>
         <link href="cardpeeking.css" rel="stylesheet" />
-        <script src="cardpeeking.js?ver=20210826"></script>
+        <script src="cardpeeking.js?ver=20210906"></script>
     </head>
     <body>
         <div id="CARD_PEEKING_AREA" debug="false" style="width: 700px; height: 700px; border: 1px solid black"></div>
         <script>
+         let THE_CARD_PEEKING_ELEM;
          function initCardPeeking (event) {
              const elem = new CardPeekingElement();
              let _card_1 = new PlayingCard(
@@ -22,6 +23,13 @@
                  'face2.png',
                  'back2.png'
              );
+             elem.setBackGround({ bgImage: 'wallpaper.png' });
+             /*
+             elem.onCardFlipped = function(flipState) {
+                 console.log(flipState.action, flipState);
+             }
+             elem.setFlipState = elem.setFlipState;
+             */
              THE_CARD_PEEKING_ELEM = elem;
          }
          document.addEventListener('DOMContentLoaded', initCardPeeking);

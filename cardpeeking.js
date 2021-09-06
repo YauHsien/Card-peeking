@@ -3,30 +3,10 @@ const CARD_PEEKING_INIT_PROF = new (function(){
     this.WIDTH = '300px';
     this.HEIGHT = '150px';
 })();
-
-let THE_CARD_PEEKING_ELEM;
-let DEBUG_ELEM;
-
 const RENDER_STATE_ENUM = new (function(){
     this.ACTIVA = '_activated';
     this.DISACT = '_disactivated';
 })();
-const FLIP_STATE_ENUM = new (function(){
-    this.DISACT = '_disactivated';
-    this.ACTIVA = '_activated';
-    this.FLIPPI = '_flipping';
-    this.RELEAS = '_released';
-})();
-const ACTION_ENUM = new (function(){
-    this.TOUC = this.TOUCH = '_touch';
-    this.MOVE = '_move';
-    this.RELE = this.RELEASE = '_release';
-})();
-const CORNER_RANGE = new Size(20, 20);
-const BASE_POSITION_1 = new Point(20, 20);
-const BASE_POSITION_2 = new Point(20, 20);
-const POKER_SIZE_1 = new Size(215, 300);
-const POKER_SIZE_2 = new Size(300, 215);
 
 /* Initialization */
 //document.addEventListener('DOMContentLoaded', initCardPeeking);
@@ -35,6 +15,8 @@ const POKER_SIZE_2 = new Size(300, 215);
  * Example of initialization
  */
 /*
+// Setup
+let THE_CARD_PEEKING_ELEM;
 function initCardPeeking (event) {
     const elem = new CardPeekingElement();
     let _card_1 = new PlayingCard(
@@ -51,8 +33,14 @@ function initCardPeeking (event) {
         'face2.png',
         'back2.png'
     );
+    elem.onCardFlipped = function(flipState) {
+        console.dir(flipState);
+    }
     THE_CARD_PEEKING_ELEM = elem;
 }
+// Initialization
+document.addEventListener('DOMContentLoaded', initCardPeeking);
+// After initialized, you may want to access it via THE_CARD_PEEKING_ELEM.
 */
 
 function CardPeekingElement() {
@@ -61,6 +49,7 @@ function CardPeekingElement() {
         console.error(`Element #${CARD_PEEKING_INIT_PROF.NAME} not found.`);
         return undefined;
     }
+    area.DEBUG_ELEM = undefined;
     area._state = RENDER_STATE_ENUM.DISACT;
     area.cardList = new CardList();
     area.render = function(event) {
@@ -280,6 +269,10 @@ function CardPeekingElement() {
     controlport.addEventListener('mousedown', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
+        area.onCardFlipped({
+            action: 'mousedown',
+            mouseDownPoint: { x: e.clientX, y: e.clientY }
+        });
         let latestTouched,
             gotBlocked = false;
         let i = 0;
@@ -307,6 +300,10 @@ function CardPeekingElement() {
     controlport.addEventListener('mousemove', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
+        area.onCardFlipped({
+            action: 'mousemove',
+            mouseMovePoint: { x: e.clientX, y: e.clientY }
+        });
         let latestTouched = area.cardList[area.cardList.length-1];
         let pt = new Point(
             e.clientX - area.getBoundingClientRect().left - area.clientLeft,
@@ -320,6 +317,9 @@ function CardPeekingElement() {
     controlport.addEventListener('mouseup', function(e) {
         if (area.getAttribute('debug') !== 'true')
             e.preventDefault();
+        area.onCardFlipped({
+            action: 'mouseup'
+        });
         let latestTouched = area.cardList[area.cardList.length-1];
         if (latestTouched) {
             latestTouched.release();
@@ -334,12 +334,46 @@ function CardPeekingElement() {
     area.appendChild(background);
     area.appendChild(viewport);
     if (area.getAttribute('debug') === 'true') {
-        DEBUG_ELEM = debugview;
+        area.DEBUG_ELEM = debugview;
         controlport.appendChild(debugview);
         area.appendChild(controlport);
     }
     else
         area.appendChild(controlport);
+    area.setBackGround = function(config) {
+        background.style.backgroundImage = `url(${config.bgImage})`;
+        background.style.backgroundRepeat = config.bgRepeat || 'no-repeat, no-repeat';
+        background.style.backgroundPosition = config.bgPosition || 'center';
+        background.style.backgroundSize = config.bgSize || 'cover';
+    };
+    area.onCardFlipped = function(flipState) {
+        if (area.getAttribute('debug') === 'true')
+            console.log(flipState.action, flipState);
+    };
+    area.setFlipState = function(flipState) {
+        var event;
+        switch (flipState.action) {
+        case 'mousedown':
+            event = new MouseEvent('mousedown', {
+                clientX: flipState.mouseDownPoint.x,
+                clientY: flipState.mouseDownPoint.y
+            });
+            break;
+        case 'mousemove':
+            event = new MouseEvent('mousemove', {
+                clientX: flipState.mouseMovePoint.x,
+                clientY: flipState.mouseMovePoint.y
+            });
+            break;
+        case 'mouseup':
+            event = new MouseEvent('mouseup');
+            break;
+        default:
+            break;
+        }
+        if (event)
+            controlport.dispatchEvent(event);
+    };
     return area;
 } /* End of function CardPeekingElement */
 
@@ -1336,12 +1370,13 @@ function CutLine(card = (new PlayingCard), pt = (new Point), slope = (1/0)) {
         }
         /* End of another card center */
         /* DEBUG */ {
-            if (DEBUG_ELEM) {
-                let rleft = THE_CARD_PEEKING_ELEM.getBoundingClientRect().left + THE_CARD_PEEKING_ELEM.clientLeft,
-                    rtop = THE_CARD_PEEKING_ELEM.getBoundingClientRect().top + THE_CARD_PEEKING_ELEM.clientTop;
-                let ctx = DEBUG_ELEM.getContext('2d');
+            let area = card._parent;
+            if (area.DEBUG_ELEM) {
+                let rleft = area.getBoundingClientRect().left + area.clientLeft,
+                    rtop = area.getBoundingClientRect().top + area.clientTop;
+                let ctx = area.DEBUG_ELEM.getContext('2d');
                 let center = card.getCenterPoint();
-                ctx.clearRect(0, 0, DEBUG_ELEM.width, DEBUG_ELEM.height);
+                ctx.clearRect(0, 0, area.DEBUG_ELEM.width, area.DEBUG_ELEM.height);
                 ctx.beginPath();
                 if (this._p2)
                     ctx.moveTo(this._p2.x, this._p2.y);
