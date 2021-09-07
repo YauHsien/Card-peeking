@@ -1,12 +1,14 @@
 <html>
     <head>
         <link href="cardpeeking.css" rel="stylesheet" />
-        <script src="cardpeeking.js?ver=20210906"></script>
+        <script src="cardpeeking.js?ver=20210907"></script>
     </head>
     <body>
         <div id="CARD_PEEKING_AREA" debug="false" style="width: 700px; height: 700px; border: 1px solid black"></div>
         <script>
-         let THE_CARD_PEEKING_ELEM;
+         let THE_CARD_PEEKING_ELEM,
+             CARD_1,
+             CARD_2;
          function initCardPeeking (event) {
              const elem = new CardPeekingElement();
              let _card_1 = new PlayingCard(
@@ -31,6 +33,8 @@
              elem.setFlipState = elem.setFlipState;
              */
              THE_CARD_PEEKING_ELEM = elem;
+             CARD_1 = _card_1;
+             CARD_2 = _card_2;
          }
          document.addEventListener('DOMContentLoaded', initCardPeeking);
         </script>

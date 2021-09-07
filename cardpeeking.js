@@ -52,6 +52,7 @@ function CardPeekingElement() {
     area.DEBUG_ELEM = undefined;
     area._state = RENDER_STATE_ENUM.DISACT;
     area.cardList = new CardList();
+    area.controlport = undefined;
     area.render = function(event) {
         if (area._state === RENDER_STATE_ENUM.ACTIVA) {
             for (let i = 0; i < area.cardList.length; i++) {
@@ -336,10 +337,9 @@ function CardPeekingElement() {
     if (area.getAttribute('debug') === 'true') {
         area.DEBUG_ELEM = debugview;
         controlport.appendChild(debugview);
-        area.appendChild(controlport);
     }
-    else
-        area.appendChild(controlport);
+    area.appendChild(controlport);
+    area.controlport = controlport;
     area.setBackGround = function(config) {
         background.style.backgroundImage = `url(${config.bgImage})`;
         background.style.backgroundRepeat = config.bgRepeat || 'no-repeat, no-repeat';
@@ -565,6 +565,21 @@ function PlayingCard(id,
                     && !pt.within(this._inner_border));
         else
             return !this._flip_state.isFullShown;
+    };
+
+    this.flip = function() {
+        let area = this._parent;
+        if (area) {
+            area.controlport.dispatchEvent(new MouseEvent('mousedown', {
+                clientX: this._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: this._top_left.y + area.getBoundingClientRect().top + area.clientTop
+            }));
+            area.controlport.dispatchEvent(new MouseEvent('mousemove', {
+                clientX: this._down_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: this._down_left.y + area.getBoundingClientRect().top + area.clientTop
+            }));
+            area.controlport.dispatchEvent(new MouseEvent('mouseup'));
+        }
     };
 
     this.touch = function(pt = (new Point)) {
