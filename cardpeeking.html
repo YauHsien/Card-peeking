@@ -5,15 +5,30 @@
     </head>
     <body>
         <div id="playground" debug="!true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
+        <div id="playground2"></div>
         <script>
          let THE_CARD_PEEKING_ELEM,
              CARD_1,
              CARD_2;
          function initCardPeeking (event) {
-             CARD_PEEKING_INIT_PROF.NAME = 'playground';
-             //CARD_PEEKING_INIT_PROF.WIDTH = '700px';
-             //CARD_PEEKING_INIT_PROF.HEIGHT = '700px';
-             const elem = new CardPeekingElement();
+             const elem = new CardPeekingElement({
+                 NAME: 'playground',
+                 WIDTH: '700px',
+                 HEIGHT: '700px'
+             });
+             const playground2 = new CardPeekingElement({
+                 NAME: 'playground2',
+                 WIDTH: '500px',
+                 HEIGHT: '500px'
+             });
+             let _card_0 = new PlayingCard(
+                 'c0',
+                 playground2,
+                 new Point(80, 220),
+                 'face1.png',
+                 'back1.png'
+             );
+
              let _card_1 = new PlayingCard(
                  'c1',
                  elem,

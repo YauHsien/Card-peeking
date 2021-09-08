@@ -43,10 +43,19 @@ document.addEventListener('DOMContentLoaded', initCardPeeking);
 // After initialized, you may want to access it via THE_CARD_PEEKING_ELEM.
 */
 
-function CardPeekingElement() {
-    const area = document.getElementById(CARD_PEEKING_INIT_PROF.NAME);
+function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
+    let settings = CARD_PEEKING_INIT_PROF;
+    /* Configuration */ if (init) {
+        if (init.hasOwnProperty('NAME') && init.NAME)
+            settings.NAME = init.NAME;
+        if (init.hasOwnProperty('WIDTH') && init.WIDTH)
+            settings.WIDTH = init.WIDTH;
+        if (init.hasOwnProperty('HEIGHT') && init.HEIGHT)
+            settings.HEIGHT = init.HEIGHT;
+    }
+    const area = document.getElementById(settings.NAME);
     if (!area) {
-        console.error(`Element #${CARD_PEEKING_INIT_PROF.NAME} not found.`);
+        console.error(`Element #${settings.NAME} not found.`);
         return undefined;
     }
     area.DEBUG_ELEM = undefined;
@@ -62,9 +71,9 @@ function CardPeekingElement() {
         }
     };
     if (!area.style.width)
-        area.style.width = CARD_PEEKING_INIT_PROF.WIDTH;
+        area.style.width = settings.WIDTH;
     if (!area.style.height)
-        area.style.height = CARD_PEEKING_INIT_PROF.HEIGHT;
+        area.style.height = settings.HEIGHT;
     const background = document.createElement('div');
     background.style.position = 'absolute';
     background.style.width = '' + area.clientWidth + 'px';
