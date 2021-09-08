@@ -123,6 +123,7 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         });
     }
     const controlport = document.createElement('div');
+    controlport.isMouseMoveExceeded = undefined;
     controlport.classList.add('control-port');
     controlport.style.position = 'absolute';
     controlport.style.width = '' + area.clientWidth + 'px';
@@ -229,13 +230,13 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         }
     }
     controlport.addEventListener('touchstart', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         judge_touches(this, e);
     });
     controlport.addEventListener('touchmove', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         if (this.touch && !this.touch.touched)
             judge_touches(this, e);
         if (this.touch
@@ -267,15 +268,15 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         }
     });
     controlport.addEventListener('touchend', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         if (e.targetTouches.length === 0)
             this.touch = undefined;
         this.dispatchEvent(new MouseEvent('mouseup', e));
     });
     controlport.addEventListener('mousedown', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         area.onCardFlipped({
             action: 'mousedown',
             mouseDownPoint: { x: e.clientX, y: e.clientY }
@@ -305,8 +306,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         area.render(e);
     });
     controlport.addEventListener('mousemove', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         area.onCardFlipped({
             action: 'mousemove',
             mouseMovePoint: { x: e.clientX, y: e.clientY }
@@ -322,8 +323,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         area.render(e);
     });
     controlport.addEventListener('mouseup', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
+        e.preventDefault();
+        e.stopPropagation();
         area.onCardFlipped({
             action: 'mouseup'
         });
@@ -333,10 +334,12 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         }
         area.render(e);
     });
-    controlport.addEventListener('mouseout', function(e) {
-        if (area.getAttribute('debug') !== 'true')
-            e.preventDefault();
-        this.dispatchEvent(new MouseEvent('mouseup', e));
+    document.getElementsByTagName('body')[0].addEventListener('mouseup', function(e) {
+        e.preventDefault();
+        let range = area.getBoundingClientRect();
+        if (e.clientX < range.left || range.right < e.clientX || e.clientY < range.top || range.bottom < e.clientY) {
+            controlport.dispatchEvent(new MouseEvent('mouseup', e));
+        }
     });
     /* Structure construction */ {
         area.appendChild(background);
