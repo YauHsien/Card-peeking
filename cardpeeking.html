@@ -1,15 +1,18 @@
 <html>
     <head>
         <link href="cardpeeking.css" rel="stylesheet" />
-        <script src="cardpeeking.js?ver=20210907"></script>
+        <script src="cardpeeking.js?ver=20210908"></script>
     </head>
     <body>
-        <div id="CARD_PEEKING_AREA" debug="false" style="width: 700px; height: 700px; border: 1px solid black"></div>
+        <div id="playground" debug="!true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
         <script>
          let THE_CARD_PEEKING_ELEM,
              CARD_1,
              CARD_2;
          function initCardPeeking (event) {
+             CARD_PEEKING_INIT_PROF.NAME = 'playground';
+             //CARD_PEEKING_INIT_PROF.WIDTH = '700px';
+             //CARD_PEEKING_INIT_PROF.HEIGHT = '700px';
              const elem = new CardPeekingElement();
              let _card_1 = new PlayingCard(
                  'c1',

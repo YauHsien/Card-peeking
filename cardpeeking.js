@@ -115,10 +115,7 @@ function CardPeekingElement() {
     }
     const controlport = document.createElement('div');
     controlport.classList.add('control-port');
-    if (area.getAttribute('debug') === 'true')
-        controlport.style.position = 'inherit';
-    else
-        controlport.style.position = 'absolute';
+    controlport.style.position = 'absolute';
     controlport.style.width = '' + area.clientWidth + 'px';
     controlport.style.height = '' + area.clientHeight + 'px';
     controlport.touch = undefined;
@@ -332,14 +329,24 @@ function CardPeekingElement() {
             e.preventDefault();
         this.dispatchEvent(new MouseEvent('mouseup', e));
     });
-    area.appendChild(background);
-    area.appendChild(viewport);
-    if (area.getAttribute('debug') === 'true') {
-        area.DEBUG_ELEM = debugview;
-        controlport.appendChild(debugview);
-    }
-    area.appendChild(controlport);
-    area.controlport = controlport;
+    /* Structure construction */ {
+        area.appendChild(background);
+        area.appendChild(viewport);
+        if (area.getAttribute('debug') === 'true') {
+            area.DEBUG_ELEM = debugview;
+            controlport.appendChild(debugview);
+        }
+        area.appendChild(controlport);
+        area.controlport = controlport;
+        if (area.getAttribute('viewonly') === 'true') {
+            const controlbreaker = document.createElement('div');
+            controlbreaker.classList.add('control-breaker');
+            controlbreaker.style.position = 'absolute';
+            controlbreaker.style.width = '' + area.clientWidth + 'px';
+            controlbreaker.style.height = '' + area.clientHeight + 'px';
+            area.appendChild(controlbreaker);
+        }
+    } /* End of structure construction */
     area.setBackGround = function(config) {
         background.style.backgroundImage = `url(${config.bgImage})`;
         background.style.backgroundRepeat = config.bgRepeat || 'no-repeat, no-repeat';
@@ -514,6 +521,34 @@ function PlayingCard(id,
             return false;
     };
 
+    this.destroy = function() {
+        let area = this._parent;
+        if (area) {
+            this._remove_element_by_id(area.cardList, this.id);
+            let viewArea = this._get_first_element_by_class_from(area);
+            if (viewArea) {
+                let oldOne = this._get_first_element_by_id_from(viewArea, this.id);
+                if (oldOne)
+                    viewArea.removeChild(oldOne);
+            }
+        }
+    };
+
+    this.flip = function() {
+        let area = this._parent;
+        if (area) {
+            area.controlport.dispatchEvent(new MouseEvent('mousedown', {
+                clientX: this._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: this._top_left.y + area.getBoundingClientRect().top + area.clientTop
+            }));
+            area.controlport.dispatchEvent(new MouseEvent('mousemove', {
+                clientX: this._down_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                clientY: this._down_left.y + area.getBoundingClientRect().top + area.clientTop
+            }));
+            area.controlport.dispatchEvent(new MouseEvent('mouseup'));
+        }
+    };
+
     this.getArea = function() {
         return get_convex_polygon_area([this._top_left, this._top_right, this._down_right, this._down_left]);
     };
@@ -565,21 +600,6 @@ function PlayingCard(id,
                     && !pt.within(this._inner_border));
         else
             return !this._flip_state.isFullShown;
-    };
-
-    this.flip = function() {
-        let area = this._parent;
-        if (area) {
-            area.controlport.dispatchEvent(new MouseEvent('mousedown', {
-                clientX: this._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                clientY: this._top_left.y + area.getBoundingClientRect().top + area.clientTop
-            }));
-            area.controlport.dispatchEvent(new MouseEvent('mousemove', {
-                clientX: this._down_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                clientY: this._down_left.y + area.getBoundingClientRect().top + area.clientTop
-            }));
-            area.controlport.dispatchEvent(new MouseEvent('mouseup'));
-        }
     };
 
     this.touch = function(pt = (new Point)) {
@@ -695,6 +715,23 @@ function PlayingCard(id,
                 return child;
         }
         return undefined;
+    };
+
+    this._remove_element_by_id = function(list, id) {
+        let rlist = [];
+        for (let i = 0; i < list.length; i++) {
+            let elem = list[i];
+            if (elem.id === id)
+                rlist[rlist.length] = i;
+        }
+        rlist.sort(function(a, b) { return b-a; });
+        for (let i = 0; i < rlist.length; i++) {
+            let index = rlist[i];
+            let elem = list[index];
+            list.splice(index, 1);
+            rlist[i] = elem;
+        }
+        return rlist;
     };
 
     this.configure(id, parent, basePoint, faceSrc, backSrc, cornerRange);
