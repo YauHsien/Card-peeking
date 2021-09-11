@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', initCardPeeking);
 //   - { action: 'touch', id: 'c1', x: 169, y: 2}
 //   - { action: 'move',  id: 'c1', x: 140, y: 31}
 //   - { action: 'release', id: 'c1' }
+// Callback `THE_CARD_PEEKING_ELEM.onCardFullShown(obj)`:
+// - The argument `obj`: the card.
 */
 
 function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
@@ -350,15 +352,19 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             area.appendChild(controlbreaker);
         }
     } /* End of structure construction */
+    area.onCardFlipped = function(flipState) {
+        if (area.getAttribute('debug') === 'true')
+            console.log(flipState.action, flipState);
+    };
+    area.onCardFullShown = function(obj) {
+        if (area.getAttribute('debug') === 'true')
+            console.log('Full shown ', obj);
+    };
     area.setBackGround = function(config) {
         background.style.backgroundImage = `url(${config.bgImage})`;
         background.style.backgroundRepeat = config.bgRepeat || 'no-repeat, no-repeat';
         background.style.backgroundPosition = config.bgPosition || 'center';
         background.style.backgroundSize = config.bgSize || 'cover';
-    };
-    area.onCardFlipped = function(flipState) {
-        if (area.getAttribute('debug') === 'true')
-            console.log(flipState.action, flipState);
     };
     area.setFlipState = function(flipState) {
         let event,
@@ -687,6 +693,10 @@ function PlayingCard(id,
                     action: 'release',
                     id: this.id,
                 });
+            }
+            if (this._flip_state.isFullShown
+                && this._parent) {
+                this._parent.onCardFullShown(this);
             }
         }
     };
