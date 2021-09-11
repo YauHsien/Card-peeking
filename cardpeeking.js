@@ -406,6 +406,7 @@ function PlayingCard(id,
     this.id = undefined;
 
     this._outer_border = undefined;
+    this._extended_outer_border = undefined;
     this._inner_border = undefined;
 
     this.BORDER_WIDTH_RATE = 0.1;
@@ -509,11 +510,19 @@ function PlayingCard(id,
     };
 
     this._get_ranges = function() {
+        let ew = (this._face.naturalWidth > this._face.naturalHeight)
+            ? this._face.naturalHeight * 0.05
+            : this._face.naturalWidth * 0.05;
         this._outer_border =
             new Range(this._base_point.x,
                       this._face.naturalWidth,
                       this._base_point.y,
                       this._face.naturalHeight);
+        this._extended_outer_border =
+            new Range(this._base_point.x - ew,
+                      this._face.naturalWidth + ew + ew,
+                      this._base_point.y - ew,
+                      this._face.naturalHeight + ew + ew);
         this._border_width = (this._face.naturalWidth > this._face.naturalHeight)
             ? (this._face.naturalWidth * this.BORDER_WIDTH_RATE)
             : (this._face.naturalHeight * this.BORDER_WIDTH_RATE);
@@ -608,7 +617,7 @@ function PlayingCard(id,
     this.isTouchable = function(pt = new Point()) {
         if (!this._flip_state)
             return (this._outer_border
-                    && pt.within(this._outer_border)
+                    && pt.within(this._extended_outer_border)
                     && !pt.within(this._inner_border));
         else
             return !this._flip_state.isFullShown;
