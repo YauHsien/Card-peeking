@@ -127,6 +127,7 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         });
     }
     const controlport = document.createElement('div');
+    controlport.isMouseDown = undefined;
     controlport.isMouseMoveExceeded = undefined;
     controlport.classList.add('control-port');
     controlport.style.position = 'absolute';
@@ -278,9 +279,7 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             this.touch = undefined;
         this.dispatchEvent(new MouseEvent('mouseup', e));
     });
-    controlport.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    function judge_mouse_drag(that, e) {
         let latestTouched,
             gotBlocked = false;
         let i = 0;
@@ -303,12 +302,20 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             area.cardList.bringToLatest(i);
             latestTouched.touch(pt);
         }
-        area.render(e);
+    }
+    controlport.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.isMouseDown = true;
+        judge_mouse_drag(this, e);
     });
     controlport.addEventListener('mousemove', function(e) {
         e.preventDefault();
         e.stopPropagation();
         let latestTouched = area.cardList[area.cardList.length-1];
+        if (this.isMouseDown && (!latestTouched._flip_state || latestTouched._flip_state.isFullShown)) {
+            judge_mouse_drag(this, e);
+        }
         let pt = new Point(
             e.clientX - area.getBoundingClientRect().left - area.clientLeft,
             e.clientY - area.getBoundingClientRect().top - area.clientTop
@@ -321,6 +328,7 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.addEventListener('mouseup', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        this.isMouseDown = undefined;
         let latestTouched = area.cardList[area.cardList.length-1];
         if (latestTouched) {
             latestTouched.release();
@@ -410,13 +418,11 @@ function PlayingCard(id,
                      parent,
                      basePoint = new Point(20, 20),
                      faceSrc,
-                     backSrc,
-                     cornerRange = new Size(20, 20)) {
+                     backSrc) {
 
     this.id = undefined;
 
     this._outer_border = undefined;
-    this._extended_outer_border = undefined;
     this._inner_border = undefined;
 
     this.BORDER_WIDTH_RATE = 0.1;
@@ -441,8 +447,6 @@ function PlayingCard(id,
     this._top_right = undefined;
     this._down_left = undefined;
     this._down_right = undefined;
-
-    this._corner_range = undefined;
 
     this.fingers = [];
 
@@ -482,11 +486,10 @@ function PlayingCard(id,
         back.src = backSrc;
     };
 
-    this.configure = function (id, parent, basePt, faceSrc, backSrc, cornerRange) {
+    this.configure = function (id, parent, basePt, faceSrc, backSrc) {
         this.id = id;
         this._parent = parent;
         this._base_point = basePt;
-        this._corner_range = cornerRange;
         this.setSrc(faceSrc, backSrc);
     };
 
@@ -528,11 +531,6 @@ function PlayingCard(id,
                       this._face.naturalWidth,
                       this._base_point.y,
                       this._face.naturalHeight);
-        this._extended_outer_border =
-            new Range(this._base_point.x - ew,
-                      this._face.naturalWidth + ew + ew,
-                      this._base_point.y - ew,
-                      this._face.naturalHeight + ew + ew);
         this._border_width = (this._face.naturalWidth > this._face.naturalHeight)
             ? (this._face.naturalWidth * this.BORDER_WIDTH_RATE)
             : (this._face.naturalHeight * this.BORDER_WIDTH_RATE);
@@ -627,7 +625,7 @@ function PlayingCard(id,
     this.isTouchable = function(pt = new Point()) {
         if (!this._flip_state)
             return (this._outer_border
-                    && pt.within(this._extended_outer_border)
+                    && pt.within(this._outer_border)
                     && !pt.within(this._inner_border));
         else
             return !this._flip_state.isFullShown;
@@ -679,10 +677,12 @@ function PlayingCard(id,
 
     this.release = function() {
         if (this._flip_state) {
+            let origIsFullShown = undefined;
             if (this._flip_state.getFaceArea() * 3 < this.getArea()) {
                 this._flip_state = undefined;
             }
             else {
+                origIsFullShown = this._flip_state.isFullShown;
                 this._flip_state.setIsFullShown(true);
             }
             this._state =
@@ -693,10 +693,10 @@ function PlayingCard(id,
                     action: 'release',
                     id: this.id,
                 });
-            }
-            if (this._flip_state.isFullShown
-                && this._parent) {
-                this._parent.onCardFullShown(this);
+                if (this._flip_state
+                    && !origIsFullShown
+                    && this._flip_state.isFullShown)
+                    this._parent.onCardFullShown(this);
             }
         }
     };
@@ -791,7 +791,7 @@ function PlayingCard(id,
         return rlist;
     };
 
-    this.configure(id, parent, basePoint, faceSrc, backSrc, cornerRange);
+    this.configure(id, parent, basePoint, faceSrc, backSrc);
 } /* End of function PlayingCard */
 
 function CardList(arr = []) {
