@@ -1,15 +1,21 @@
 <html>
     <head>
         <link href="cardpeeking.css" rel="stylesheet" />
-        <script src="cardpeeking.js?ver=20210908"></script>
+        <script src="cardpeeking.js?ver=20210911"></script>
     </head>
     <body>
         <div id="playground" debug="!true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
-        <div id="playground2"></div>
+        <div id="playground2" debug="!true"></div>
         <script>
          let THE_CARD_PEEKING_ELEM,
              CARD_1,
              CARD_2;
+         // Callback `THE_CARD_PEEKING_ELEM.onCardFlipped(flipState)`:
+         // - The argument `flipState` may be one of the following cases:
+         //   - { action: 'touch', id: 'c1', x: 169, y: 2}
+         //   - { action: 'move',  id: 'c1', x: 140, y: 31}
+         //   - { action: 'release', id: 'c1' }
+
          function initCardPeeking (event) {
              const elem = new CardPeekingElement({
                  NAME: 'playground',
@@ -23,9 +29,9 @@
                  HEIGHT: '500px'
              });
              let _card_0 = new PlayingCard(
-                 'c0',
+                 'c1',
                  playground2,
-                 new Point(80, 220),
+                 new Point(70, 210),
                  'face1.png',
                  'back1.png'
              );

@@ -33,14 +33,16 @@ function initCardPeeking (event) {
         'face2.png',
         'back2.png'
     );
-    elem.onCardFlipped = function(flipState) {
-        console.dir(flipState);
-    }
     THE_CARD_PEEKING_ELEM = elem;
 }
 // Initialization
 document.addEventListener('DOMContentLoaded', initCardPeeking);
 // After initialized, you may want to access it via THE_CARD_PEEKING_ELEM.
+// Callback `THE_CARD_PEEKING_ELEM.onCardFlipped(flipState)`:
+// - The argument `flipState` may be one of the following cases:
+//   - { action: 'touch', id: 'c1', x: 169, y: 2}
+//   - { action: 'move',  id: 'c1', x: 140, y: 31}
+//   - { action: 'release', id: 'c1' }
 */
 
 function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
@@ -277,10 +279,6 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.addEventListener('mousedown', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        area.onCardFlipped({
-            action: 'mousedown',
-            mouseDownPoint: { x: e.clientX, y: e.clientY }
-        });
         let latestTouched,
             gotBlocked = false;
         let i = 0;
@@ -308,10 +306,6 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.addEventListener('mousemove', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        area.onCardFlipped({
-            action: 'mousemove',
-            mouseMovePoint: { x: e.clientX, y: e.clientY }
-        });
         let latestTouched = area.cardList[area.cardList.length-1];
         let pt = new Point(
             e.clientX - area.getBoundingClientRect().left - area.clientLeft,
@@ -325,9 +319,6 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.addEventListener('mouseup', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        area.onCardFlipped({
-            action: 'mouseup'
-        });
         let latestTouched = area.cardList[area.cardList.length-1];
         if (latestTouched) {
             latestTouched.release();
@@ -370,22 +361,35 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             console.log(flipState.action, flipState);
     };
     area.setFlipState = function(flipState) {
-        var event;
+        let event,
+            elements;
         switch (flipState.action) {
-        case 'mousedown':
-            event = new MouseEvent('mousedown', {
-                clientX: flipState.mouseDownPoint.x,
-                clientY: flipState.mouseDownPoint.y
-            });
+        case 'touch':
+            elements = area.cardList.getElementsById(flipState.id);
+            if (elements && elements.length > 0) {
+                let clientX = flipState.x + elements[0]._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.y + elements[0]._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                event = new MouseEvent('mousedown', {
+                    clientX: clientX,
+                    clientY: clientY
+                });
+
+            }
             break;
-        case 'mousemove':
-            event = new MouseEvent('mousemove', {
-                clientX: flipState.mouseMovePoint.x,
-                clientY: flipState.mouseMovePoint.y
-            });
+        case 'move':
+            elements = area.cardList.getElementsById(flipState.id);
+            if (elements && elements.length > 0) {
+                let clientX = flipState.x + elements[0]._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.y + elements[0]._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                event = new MouseEvent('mousemove', {
+                    clientX: clientX,
+                    clientY: clientY
+                });
+            }
             break;
-        case 'mouseup':
+        case 'release':
             event = new MouseEvent('mouseup');
+            controlport.dispatchEvent(event);
             break;
         default:
             break;
@@ -632,6 +636,14 @@ function PlayingCard(id,
             this._state =
                 this._parent._state =
                 RENDER_STATE_ENUM.ACTIVA;
+            if (this._parent) {
+                this._parent.onCardFlipped({
+                    action: 'touch',
+                    id: this.id,
+                    x: pt.x - this._top_left.x,
+                    y: pt.y - this._top_left.y
+                });
+            }
         }
     };
 
@@ -648,6 +660,14 @@ function PlayingCard(id,
                     this._parent._state =
                     RENDER_STATE_ENUM.ACTIVA;
             }
+            if (this._parent) {
+                this._parent.onCardFlipped({
+                    action: 'move',
+                    id: this.id,
+                    x: toPt.x - this._top_left.x,
+                    y: toPt.y - this._top_left.y
+                });
+            }
         }
     };
 
@@ -662,6 +682,12 @@ function PlayingCard(id,
             this._state =
                 this._parent._state =
                 RENDER_STATE_ENUM.ACTIVA;
+            if (this._parent) {
+                this._parent.onCardFlipped({
+                    action: 'release',
+                    id: this.id,
+                });
+            }
         }
     };
 
@@ -769,6 +795,15 @@ function CardList(arr = []) {
             for (let j = 0; j < obj.length; j++)
                 obj[j] = newArray[j];
         }
+    };
+    obj.getElementsById = function(id) {
+        let rlist = [];
+        for (let i = 0; i < this.length; i++) {
+            let elem = this[i];
+            if (elem.id === id)
+                rlist[rlist.length] = this[i];
+        }
+        return rlist;
     };
     return obj;
 } /* End of function CardList */
