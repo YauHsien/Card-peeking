@@ -82,7 +82,6 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     background.style.position = 'absolute';
     background.style.width = settings.WIDTH;
     background.style.height = settings.HEIGHT;
-    background.style.backgroundColor = 'navy';
     const viewport = document.createElement('div');
     viewport.classList.add('view-port');
     viewport.style.position = 'absolute';
@@ -369,7 +368,10 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             console.log('Full shown ', obj);
     };
     area.setBackGround = function(config) {
-        background.style.backgroundImage = `url(${config.bgImage})`;
+        if (config.bgColor)
+            background.style.backgroundColor = config.bgColor;
+        if (config.bgImage)
+            background.style.backgroundImage = `url(${config.bgImage})`;
         background.style.backgroundRepeat = config.bgRepeat || 'no-repeat, no-repeat';
         background.style.backgroundPosition = config.bgPosition || 'center';
         background.style.backgroundSize = config.bgSize || 'cover';
