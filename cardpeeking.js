@@ -80,21 +80,21 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         area.style.height = settings.HEIGHT;
     const background = document.createElement('div');
     background.style.position = 'absolute';
-    background.style.width = '' + area.clientWidth + 'px';
-    background.style.height = '' + area.clientHeight + 'px';
+    background.style.width = settings.WIDTH;
+    background.style.height = settings.HEIGHT;
     background.style.backgroundColor = 'navy';
     const viewport = document.createElement('div');
     viewport.classList.add('view-port');
     viewport.style.position = 'absolute';
-    viewport.style.width = '' + area.clientWidth + 'px';
-    viewport.style.height = '' + area.clientHeight + 'px';
+    viewport.style.width = settings.WIDTH;
+    viewport.style.height = settings.HEIGHT;
     let debugview;
     if (area.getAttribute('debug') === 'true') {
         debugview = document.createElement('canvas');
         debugview._state = RENDER_STATE_ENUM.DISACT;
         debugview.style.position = 'absolute';
-        debugview.setAttribute('width', area.clientWidth);
-        debugview.setAttribute('height', area.clientHeight);
+        debugview.setAttribute('width', settings.WIDTH);
+        debugview.setAttribute('height', settings.HEIGHT);
         debugview.render = function(event) {
             if (debugview._state === RENDER_STATE_ENUM.ACTIVA) {
                 console.log('debug reander!');
@@ -131,8 +131,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.isMouseMoveExceeded = undefined;
     controlport.classList.add('control-port');
     controlport.style.position = 'absolute';
-    controlport.style.width = '' + area.clientWidth + 'px';
-    controlport.style.height = '' + area.clientHeight + 'px';
+    controlport.style.width = settings.WIDTH;
+    controlport.style.height = settings.HEIGHT;
     controlport.touch = undefined;
     function judge_touches(that, e) {
         let controlled;
@@ -355,8 +355,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             const controlbreaker = document.createElement('div');
             controlbreaker.classList.add('control-breaker');
             controlbreaker.style.position = 'absolute';
-            controlbreaker.style.width = '' + area.clientWidth + 'px';
-            controlbreaker.style.height = '' + area.clientHeight + 'px';
+            controlbreaker.style.width = settings.WIDTH;
+            controlbreaker.style.height = settings.HEIGHT;
             area.appendChild(controlbreaker);
         }
     } /* End of structure construction */
