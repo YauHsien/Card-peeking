@@ -241,7 +241,7 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
     controlport.addEventListener('touchmove', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (this.touch && !this.touch.touched)
+        if (!this.touch)
             judge_touches(this, e);
         if (this.touch
             && ((e.targetTouches.length === 2
