@@ -312,14 +312,16 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         e.preventDefault();
         e.stopPropagation();
         let latestTouched = area.cardList[area.cardList.length-1];
-        if (this.isMouseDown && (!latestTouched._flip_state || latestTouched._flip_state.isFullShown)) {
+        if (this.isMouseDown
+            && latestTouched
+            && (!latestTouched._flip_state || latestTouched._flip_state.isFullShown)) {
             judge_mouse_drag(this, e);
         }
-        let pt = new Point(
-            e.clientX - area.getBoundingClientRect().left - area.clientLeft,
-            e.clientY - area.getBoundingClientRect().top - area.clientTop
-        );
         if (latestTouched) {
+            let pt = new Point(
+                e.clientX - area.getBoundingClientRect().left - area.clientLeft,
+                e.clientY - area.getBoundingClientRect().top - area.clientTop
+            );
             latestTouched.move(pt);
         }
         area.render(e);
