@@ -359,6 +359,11 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             area.appendChild(controlbreaker);
         }
     } /* End of structure construction */
+    area.flipCard = function(id) {
+        let cards = area.cardList.getElementsById(id);
+        for (let i = 0; i < cards.length; i++)
+            cards[i].flip();
+    };
     area.onCardFlipped = function(flipState) {
         if (area.getAttribute('debug') === 'true')
             console.log(flipState.action, flipState);
@@ -383,8 +388,9 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         case 'touch':
             elements = area.cardList.getElementsById(flipState.id);
             if (elements && elements.length > 0) {
-                let clientX = flipState.x + elements[0]._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                    clientY = flipState.y + elements[0]._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                let elem = elements[0],
+                    clientX = flipState.x / flipState.w * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.y / flipState.h * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
                 event = new MouseEvent('mousedown', {
                     clientX: clientX,
                     clientY: clientY
@@ -395,8 +401,9 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
         case 'move':
             elements = area.cardList.getElementsById(flipState.id);
             if (elements && elements.length > 0) {
-                let clientX = flipState.x + elements[0]._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                    clientY = flipState.y + elements[0]._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                let elem = elements[0],
+                    clientX = flipState.x / flipState.w * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.y / flipState.h * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
                 event = new MouseEvent('mousemove', {
                     clientX: clientX,
                     clientY: clientY
@@ -646,6 +653,8 @@ function PlayingCard(id,
                 this._parent.onCardFlipped({
                     action: 'touch',
                     id: this.id,
+                    w: this._top_side.getDistance(),
+                    h: this._left_side.getDistance(),
                     x: pt.x - this._top_left.x,
                     y: pt.y - this._top_left.y
                 });
@@ -670,6 +679,8 @@ function PlayingCard(id,
                 this._parent.onCardFlipped({
                     action: 'move',
                     id: this.id,
+                    w: this._top_side.getDistance(),
+                    h: this._left_side.getDistance(),
                     x: toPt.x - this._top_left.x,
                     y: toPt.y - this._top_left.y
                 });

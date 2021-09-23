@@ -1,7 +1,7 @@
 <html>
     <head>
         <link href="cardpeeking.css" rel="stylesheet" />
-        <script src="cardpeeking.js?ver=20210917"></script>
+        <script src="cardpeeking.js?ver=20210923"></script>
     </head>
     <body>
         <div id="playground" debug="true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
@@ -56,12 +56,12 @@
                  //bgColor: 'navy',
                  //bgImage: 'wallpaper.png',
              });
-             /*
              elem.onCardFlipped = function(flipState) {
-                 console.log(flipState.action, flipState);
-             }
-             elem.setFlipState = elem.setFlipState;
-             */
+                 playground2.setFlipState(flipState);
+             };
+             elem.onCardFullShown = function(card) {
+                 playground2.flipCard(card.id);
+             };
              THE_CARD_PEEKING_ELEM = elem;
              CARD_1 = _card_1;
              CARD_2 = _card_2;
