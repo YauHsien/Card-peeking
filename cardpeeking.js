@@ -691,7 +691,9 @@ function PlayingCard(id,
     };
 
     this.release = function() {
-        if (this._flip_state) {
+        if (this._flip_state
+            && this._flip_state.edgePt
+            && this._flip_state.dragPt) {
             let origIsFullShown = undefined;
             if (this._flip_state.getFaceArea() * 3 < this.getArea()) {
                 this._flip_state = undefined;
