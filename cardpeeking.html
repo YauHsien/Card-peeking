@@ -4,7 +4,7 @@
         <script src="cardpeeking.js?ver=20210923"></script>
     </head>
     <body>
-        <div id="playground" debug="true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
+        <div id="playground" debug="!true" viewonly="!true" style="width: 700px; height: 700px; border: 1px solid black"></div>
         <div id="playground2" debug="!true"></div>
         <script>
          let THE_CARD_PEEKING_ELEM,
@@ -34,8 +34,8 @@
                  'c1',
                  playground2,
                  new Point(70, 210),
-                 'face1.png',
-                 'back1.png'
+                 'face1s.png',
+                 'back1s.png'
              );
 
              let _card_1 = new PlayingCard(
@@ -57,9 +57,13 @@
                  //bgImage: 'wallpaper.png',
              });
              elem.onCardFlipped = function(flipState) {
+                 if (this.getAttribute('debug') == 'true')
+                     console.log('onCardFlipped:', flipState);
                  playground2.setFlipState(flipState);
              };
              elem.onCardFullShown = function(card) {
+                 if (this.getAttribute('debug') == 'true')
+                     console.log('onCardFullShown:', card);
                  playground2.flipCard(card.id);
              };
              THE_CARD_PEEKING_ELEM = elem;

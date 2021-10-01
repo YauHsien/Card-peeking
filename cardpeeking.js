@@ -391,8 +391,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             elements = area.cardList.getElementsById(flipState.id);
             if (elements && elements.length > 0) {
                 let elem = elements[0],
-                    clientX = flipState.x / flipState.w * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                    clientY = flipState.y / flipState.h * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                    clientX = flipState.rx * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.ry * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
                 event = new MouseEvent('mousedown', {
                     clientX: clientX,
                     clientY: clientY
@@ -404,8 +404,8 @@ function CardPeekingElement(init = CARD_PEEKING_INIT_PROF) {
             elements = area.cardList.getElementsById(flipState.id);
             if (elements && elements.length > 0) {
                 let elem = elements[0],
-                    clientX = flipState.x / flipState.w * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
-                    clientY = flipState.y / flipState.h * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
+                    clientX = flipState.rx * elem._top_side.getDistance() + elem._top_left.x + area.getBoundingClientRect().left + area.clientLeft,
+                    clientY = flipState.ry * elem._left_side.getDistance() + elem._top_left.y + area.getBoundingClientRect().top + area.clientTop;
                 event = new MouseEvent('mousemove', {
                     clientX: clientX,
                     clientY: clientY
@@ -655,10 +655,8 @@ function PlayingCard(id,
                 this._parent.onCardFlipped({
                     action: 'touch',
                     id: this.id,
-                    w: this._top_side.getDistance(),
-                    h: this._left_side.getDistance(),
-                    x: pt.x - this._top_left.x,
-                    y: pt.y - this._top_left.y
+                    rx: (pt.x - this._top_left.x) / this._top_side.getDistance(),
+                    ry: (pt.y - this._top_left.y) / this._left_side.getDistance()
                 });
             }
         }
@@ -681,10 +679,8 @@ function PlayingCard(id,
                 this._parent.onCardFlipped({
                     action: 'move',
                     id: this.id,
-                    w: this._top_side.getDistance(),
-                    h: this._left_side.getDistance(),
-                    x: toPt.x - this._top_left.x,
-                    y: toPt.y - this._top_left.y
+                    rx: (toPt.x - this._top_left.x) / this._top_side.getDistance(),
+                    ry: (toPt.y - this._top_left.y) / this._left_side.getDistance()
                 });
             }
         }
